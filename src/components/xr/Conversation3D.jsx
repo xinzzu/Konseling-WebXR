@@ -200,7 +200,7 @@ export default function Conversation3D() {
       // - x: posisi horizontal (kiri/kanan), 0 = tengah
       // - y: TINGGI panel, 1.8 = eye level VR
       // - z: jarak dari user, -1.5 = 1.5 meter di depan
-      <group position={[0, 1.8, -1.5]}>
+      <group position={[0, 0.1, -0.9]}>
         <Panel3D width={1.6} height={1.2} backgroundColor="#0a0a1a">
           <Text position={[0, 0.4, 0.02]} fontSize={0.12}>
             ✨
