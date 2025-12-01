@@ -1,0 +1,151 @@
+{
+  "topics": [
+    {
+      "id": "akademik",
+      "label": "Tekanan Akademik",
+      "color": "#EF5350",
+      "description": "Perasaan cemas atau stres terkait nilai, ujian, atau performa sekolah.",
+      "prompt_context": "User sedang mengalami tekanan akademik.",
+      "conversations": [
+        {
+          "role": "assistant",
+          "text": "Halo! Saya mendengar kamu sedang mengalami tekanan akademik. Bagaimana perasaanmu akhir-akhir ini?"
+        },
+        {
+          "role": "user_choice",
+          "options": [
+            "Saya merasa sangat cemas dengan ujian yang akan datang",
+            "Nilai saya menurun dan saya tidak tahu harus bagaimana",
+            "Saya kesulitan fokus saat belajar"
+          ]
+        },
+        {
+          "role": "assistant",
+          "text": "Terima kasih sudah mau berbagi. Perasaanmu sangat valid. Tekanan akademik memang bisa sangat berat, tapi ingat kamu tidak sendirian menghadapi ini."
+        },
+        {
+          "role": "user_choice",
+          "options": [
+            "Bagaimana cara mengatasi kecemasan ini?",
+            "Apakah wajar merasa seperti ini?",
+            "Saya butuh tips untuk belajar lebih efektif"
+          ]
+        },
+        {
+          "role": "assistant",
+          "text": "Sangat wajar merasa cemas. Satu langkah kecil yang bisa kamu coba adalah teknik 5-4-3-2-1: sebutkan 5 hal yang kamu lihat, 4 yang kamu dengar, 3 yang kamu rasakan, 2 yang kamu cium, dan 1 yang kamu rasa. Ini membantu menenangkan pikiran."
+        },
+        {
+          "role": "user_choice",
+          "options": [
+            "Terima kasih, saya akan mencobanya",
+            "Ada tips lain yang bisa saya coba?",
+            "Bagaimana jika teknik ini tidak berhasil?"
+          ]
+        },
+        {
+          "role": "assistant",
+          "text": "Bagus sekali! Ingat, progres lebih penting dari kesempurnaan. Kamu sudah berani untuk berbagi dan mencari bantuan - itu langkah besar! Semoga harimu menyenangkan dan jangan lupa istirahat yang cukup ya."
+        }
+      ]
+    },
+    {
+      "id": "sosial",
+      "label": "Masalah Sosial",
+      "color": "#42A5F5",
+      "description": "Konflik dengan teman, perasaan kesepian, atau masalah pergaulan.",
+      "prompt_context": "User memiliki masalah sosial dengan teman atau lingkungan.",
+      "conversations": [
+        {
+          "role": "assistant",
+          "text": "Hai! Sepertinya kamu ingin membicarakan tentang hubungan sosialmu. Apa yang sedang terjadi dengan teman-temanmu?"
+        },
+        {
+          "role": "user_choice",
+          "options": [
+            "Saya merasa dikucilkan oleh teman-teman",
+            "Ada konflik dengan sahabat saya",
+            "Saya kesulitan mencari teman baru"
+          ]
+        },
+        {
+          "role": "assistant",
+          "text": "Aku mengerti perasaanmu. Hubungan sosial memang bisa rumit dan menyakitkan. Yang penting adalah kamu menyadari bahwa perasaanmu ini valid."
+        },
+        {
+          "role": "user_choice",
+          "options": [
+            "Bagaimana cara memperbaiki hubungan ini?",
+            "Apakah saya yang salah?",
+            "Saya ingin belajar berkomunikasi lebih baik"
+          ]
+        },
+        {
+          "role": "assistant",
+          "text": "Dalam konflik, biasanya tidak ada yang benar atau salah sepenuhnya. Coba mulai dengan mendengarkan sudut pandang orang lain tanpa menghakimi, dan ungkapkan perasaanmu dengan kata 'saya merasa...' bukan 'kamu selalu...'"
+        },
+        {
+          "role": "user_choice",
+          "options": [
+            "Saya akan mencoba pendekatan itu",
+            "Bagaimana jika mereka tidak mau bicara?",
+            "Terima kasih atas sarannya"
+          ]
+        },
+        {
+          "role": "assistant",
+          "text": "Kamu hebat sudah mau berusaha! Ingat, hubungan yang sehat membutuhkan usaha dari kedua belah pihak. Jaga dirimu dan jangan ragu untuk mencari support dari orang dewasa yang kamu percaya."
+        }
+      ]
+    },
+    {
+      "id": "keluarga",
+      "label": "Masalah Keluarga",
+      "color": "#66BB6A",
+      "description": "Hubungan dengan orang tua, saudara, atau dinamika keluarga.",
+      "prompt_context": "User sedang mengalami masalah dengan keluarga.",
+      "conversations": [
+        {
+          "role": "assistant",
+          "text": "Selamat datang. Keluarga adalah bagian penting dalam hidup kita. Ceritakan, apa yang sedang terjadi di rumah?"
+        },
+        {
+          "role": "user_choice",
+          "options": [
+            "Orang tua saya sering bertengkar",
+            "Saya merasa tidak dipahami oleh keluarga",
+            "Ada tekanan ekspektasi dari keluarga"
+          ]
+        },
+        {
+          "role": "assistant",
+          "text": "Situasi seperti itu pasti sangat berat untukmu. Penting untuk diingat bahwa perasaanmu valid, dan masalah keluarga bukan kesalahanmu."
+        },
+        {
+          "role": "user_choice",
+          "options": [
+            "Apa yang bisa saya lakukan?",
+            "Bagaimana cara bicara dengan orang tua?",
+            "Saya merasa terjebak"
+          ]
+        },
+        {
+          "role": "assistant",
+          "text": "Coba cari waktu yang tepat untuk bicara, ketika suasana tenang. Mulai dengan mengungkapkan perasaanmu tanpa menyalahkan. Misalnya: 'Aku merasa sedih ketika...' Jika situasi terlalu berat, jangan ragu mencari bantuan dari guru BK atau konselor."
+        },
+        {
+          "role": "user_choice",
+          "options": [
+            "Saya akan mencoba berbicara dengan mereka",
+            "Terima kasih sudah mendengarkan",
+            "Saya masih bingung harus mulai dari mana"
+          ]
+        },
+        {
+          "role": "assistant",
+          "text": "Langkah pertama yang kamu ambil hari ini sudah sangat berani. Apapun hasilnya, kamu sudah melakukan yang terbaik. Ingat untuk selalu menjaga kesehatan mentalmu dan jangan simpan semuanya sendiri."
+        }
+      ]
+    }
+  ]
+}
