@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "name": "konseling-webxr",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "build" }
+    }
+  ],
+  "outputDirectory": "build",
+  "routes": [
+    { "src": "/*", "dest": "/index.html" }
+  ]
+}
