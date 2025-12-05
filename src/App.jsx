@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import useGameStore from "./store/useGameStore";
 import XRCanvas from "./components/xr/XRCanvas";
 import VRButton from "./components/xr/VRButton";
@@ -6,6 +6,8 @@ import MainScene from "./components/xr/MainScene";
 import StartScreen from "./components/screens/StartScreen";
 import EnvironmentSelectScreen from "./components/screens/EnvironmentSelectScreen";
 import TopicSelectScreen from "./components/screens/TopicSelectScreen";
+import ProblemSelectScreen from "./components/screens/ProblemSelectScreen";
+import StoryScreen from "./components/screens/StoryScreen";
 import ConversationPanel from "./components/ui/ConversationPanel";
 
 /**
@@ -87,6 +89,8 @@ export default function App() {
           {gameState === 'start' && <StartScreen />}
           {gameState === 'environment_select' && <EnvironmentSelectScreen />}
           {gameState === 'topic_select' && <TopicSelectScreen />}
+          {gameState === 'problem_select' && <ProblemSelectScreen />}
+          {gameState === 'story' && <StoryScreen />}
           {(gameState === 'conversation' || gameState === 'finished') && <ConversationPanel />}
         </>
       )}

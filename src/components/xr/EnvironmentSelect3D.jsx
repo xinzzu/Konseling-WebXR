@@ -1,26 +1,53 @@
-import React from "react";
+import React, { useState } from "react";
 import { Text, RoundedBox } from "@react-three/drei";
 import Panel3D from "./Panel3D";
 import Button3D from "./Button3D";
 import useGameStore from "../../store/useGameStore";
 import { ENVIRONMENTS } from "./environments";
+import { startGreeting } from "../../services/chatService";
 
 /**
  * EnvironmentSelect3D - Pilihan environment dalam bentuk 3D untuk VR
+ * Saat memilih environment, akan memanggil API /chat untuk memulai sesi
  */
 export default function EnvironmentSelect3D() {
+  const [isLoading, setIsLoading] = useState(false);
+  
   const setSelectedEnvironment = useGameStore((s) => s.setSelectedEnvironment);
   const selectedEnvironment = useGameStore((s) => s.selectedEnvironment);
   const setGameState = useGameStore((s) => s.setGameState);
+  const handleBackendResponse = useGameStore((s) => s.handleBackendResponse);
 
-  const handleSelectEnvironment = (envId) => {
+  const handleSelectEnvironment = async (envId) => {
     setSelectedEnvironment(envId);
-    setGameState('topic_select');
+    setIsLoading(true);
+    
+    try {
+      // Panggil API backend untuk memulai sesi greeting
+      const response = await startGreeting();
+      // Reset loading SEBELUM handle response agar UI responsive
+      setIsLoading(false);
+      handleBackendResponse(response);
+      // State akan otomatis berubah ke 'topic_select' via handleBackendResponse
+    } catch (err) {
+      console.error('Failed to start session:', err);
+      setIsLoading(false);
+    }
   };
 
   const handleBack = () => {
     setGameState('start');
   };
+
+  if (isLoading) {
+    return (
+      <group position={[0, 1.5, -1.5]}>
+        <Text fontSize={0.08} color="white" anchorX="center" anchorY="middle">
+          Memulai sesi...
+        </Text>
+      </group>
+    );
+  }
 
   // Calculate positions for environment cards
   const cardWidth = 0.55;
@@ -34,7 +61,7 @@ export default function EnvironmentSelect3D() {
     // - x: posisi horizontal (kiri/kanan), 0 = tengah
     // - y: TINGGI panel, tambah nilai untuk naik (misal 1.8 lebih tinggi dari 1.5)
     // - z: jarak dari user, nilai negatif = di depan user (-1.5 = 1.5 meter di depan)
-    <group position={[0, 1.5, -1.5]}>
+    <group position={[0, 1.6, -0.7]}>
       {/* Main Container Panel */}
       <Panel3D
         position={[0, 0, 0]}

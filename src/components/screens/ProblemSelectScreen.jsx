@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import useGameStore from "../../store/useGameStore";
-import { selectTopic } from "../../services/chatService";
+import { selectProblem } from "../../services/chatService";
 import ttsService from "../../services/ttsService";
 import speechService from "../../services/speechService";
 import VoiceWaveform from "../ui/VoiceWaveform";
@@ -18,38 +18,29 @@ import VoiceWaveform from "../ui/VoiceWaveform";
 const OPTIONS_DISPLAY_MODE = "after_audio"; // "instant" | "after_audio" | "delayed"
 const DELAY_MS = 3000; // Delay dalam ms jika mode "delayed"
 
-// Fallback topics kalau backend belum response
-const FALLBACK_TOPICS = [
-  { id: 'diri', label: 'Damai dengan Diri', description: 'Ketenangan batin, penerimaan diri, keseimbangan emosi, dan kemampuan mengelola stres.' },
-  { id: 'sosial', label: 'Damai dengan Sosial', description: 'Kemampuan hidup rukun, menghargai perbedaan, dan berempati dalam interaksi sosial.' },
-  { id: 'alam', label: 'Damai dengan Alam', description: 'Hubungan harmonis dengan lingkungan hidup, kepedulian, dan perilaku ramah lingkungan.' },
-];
-
 /**
- * TopicSelectScreen - Layar pemilihan topik konseling
- * Data topik diambil dari backend response
+ * ProblemSelectScreen - Layar pemilihan masalah (3 kali)
+ * User memilih 3 masalah yang paling relevan dengan kondisinya
  */
-export default function TopicSelectScreen() {
+export default function ProblemSelectScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showOptions, setShowOptions] = useState(OPTIONS_DISPLAY_MODE === "instant");
   const [audioData, setAudioData] = useState(new Uint8Array(32));
   
-  const topicsFromStore = useGameStore((s) => s.topics);
+  const problems = useGameStore((s) => s.problems);
+  const problemRound = useGameStore((s) => s.problemRound);
+  const selectedTopic = useGameStore((s) => s.selectedTopic);
   const currentResponse = useGameStore((s) => s.currentResponse);
   const currentAudio = useGameStore((s) => s.currentAudio);
   const ttsConfig = useGameStore((s) => s.ttsConfig);
   const setIsSpeaking = useGameStore((s) => s.setIsSpeaking);
-  
-  // Gunakan topics dari store, atau fallback jika kosong
-  const topics = topicsFromStore?.length > 0 ? topicsFromStore : FALLBACK_TOPICS;
-  const setGameState = useGameStore((s) => s.setGameState);
-  const setSelectedTopic = useGameStore((s) => s.setSelectedTopic);
   const handleBackendResponse = useGameStore((s) => s.handleBackendResponse);
+  const setGameState = useGameStore((s) => s.setGameState);
 
   // Pesan dari backend
-  const message = currentResponse?.message || 'Pilih topik yang ingin kamu bicarakan';
+  const message = currentResponse?.message || 'Pilih masalah yang paling menggambarkan kondisimu';
   const speechText = currentResponse?.speechText || message;
 
   // Setup audio data callback untuk waveform
@@ -62,15 +53,16 @@ export default function TopicSelectScreen() {
     };
   }, []);
 
-  // Auto-play audio saat masuk halaman
+  // Auto-play audio saat masuk halaman atau round berubah
   useEffect(() => {
     ttsService.stop();
-    
-    // Reset showOptions jika bukan instant
-    if (OPTIONS_DISPLAY_MODE !== "instant") {
-      setShowOptions(false);
-    } else {
+
+    // Reset showOptions berdasarkan mode
+    if (OPTIONS_DISPLAY_MODE === "instant") {
       setShowOptions(true);
+    } else {
+      // Mode after_audio atau delayed - hide dulu
+      setShowOptions(false);
     }
 
     // Jika mode delayed, set timer
@@ -92,7 +84,6 @@ export default function TopicSelectScreen() {
         onEnd: () => {
           setIsPlaying(false);
           setIsSpeaking(false);
-          // Tampilkan options setelah audio selesai
           if (OPTIONS_DISPLAY_MODE === "after_audio") {
             setShowOptions(true);
           }
@@ -113,8 +104,9 @@ export default function TopicSelectScreen() {
       ttsService.stop();
       setIsSpeaking(false);
     };
-  }, [currentAudio, ttsConfig, speechText, setIsSpeaking]);
+  }, [currentAudio, ttsConfig, speechText, problemRound, setIsSpeaking]);
 
+  // Handle play/stop audio manual
   const handleToggleAudio = () => {
     if (isPlaying) {
       ttsService.stop();
@@ -157,40 +149,33 @@ export default function TopicSelectScreen() {
     setShowOptions(true);
   };
 
-  const handleSelectTopic = async (topic) => {
-    setIsLoading(true);
-    setError(null);
-    setSelectedTopic(topic);
-    
-    try {
-      // Panggil API backend untuk memilih topik
-      const response = await selectTopic(topic.id);
-      // Reset loading SEBELUM handle response agar UI responsive
-      setIsLoading(false);
-      handleBackendResponse(response);
-      // State akan otomatis berubah ke 'problem_select' via handleBackendResponse
-    } catch (err) {
-      console.error('Failed to select topic:', err);
-      setError('Gagal memilih topik. Silakan coba lagi.');
-      setIsLoading(false);
-    }
-  };
-
-  const handleBack = () => {
-    setGameState('environment_select');
-  };
-
-  // Topic colors mapping
+  // Topic colors
   const topicColors = {
     diri: '#66BB6A',
     sosial: '#42A5F5', 
     alam: '#FFA726',
   };
+  const currentColor = topicColors[selectedTopic?.id] || '#666';
 
-  const topicIcons = {
-    diri: '🧘',
-    sosial: '👥',
-    alam: '🌿',
+  const handleSelectProblem = async (problem) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await selectProblem(problem.id);
+      // Reset loading SEBELUM handle response agar UI responsive
+      setIsLoading(false);
+      handleBackendResponse(response);
+      // State akan berubah ke 'problem_select' (round berikutnya) atau 'story'
+    } catch (err) {
+      console.error('Failed to select problem:', err);
+      setError('Gagal memilih. Silakan coba lagi.');
+      setIsLoading(false);
+    }
+  };
+
+  const handleBack = () => {
+    setGameState('topic_select');
   };
 
   return (
@@ -201,28 +186,44 @@ export default function TopicSelectScreen() {
           ← Kembali
         </button>
 
-        {/* Audio Button */}
+        {/* Progress Indicator */}
+        <div style={styles.progressContainer}>
+          <div style={styles.progressLabel}>Langkah {problemRound} dari 3</div>
+          <div style={styles.progressBar}>
+            <div 
+              style={{
+                ...styles.progressFill,
+                width: `${(problemRound / 3) * 100}%`,
+                background: currentColor,
+              }} 
+            />
+          </div>
+        </div>
+
+        {/* Header */}
+        <h2 style={styles.title}>
+          {selectedTopic?.label || 'Pilih Masalah'}
+        </h2>
+        <p style={styles.subtitle}>{message}</p>
+
+        {/* Audio Control */}
         {ttsConfig?.mode !== 'off' && (
           <button 
             style={{
               ...styles.audioButton,
-              background: isPlaying ? '#42A5F5' : 'rgba(255,255,255,0.1)',
-            }} 
+              background: isPlaying ? currentColor : 'rgba(255,255,255,0.1)',
+            }}
             onClick={handleToggleAudio}
           >
-            {isPlaying ? '🔊 ...' : '🔈 Putar'}
+            {isPlaying ? '🔊 Sedang Berbicara...' : '🔈 Putar Pesan'}
           </button>
         )}
-
-        {/* Header */}
-        <h2 style={styles.title}>Pilih Area Kedamaian</h2>
-        <p style={styles.subtitle}>{message}</p>
 
         {/* Loading State */}
         {isLoading && (
           <div style={styles.loadingOverlay}>
             <div style={styles.spinner} />
-            <p>Memproses pilihan...</p>
+            <p>{problemRound === 3 ? 'Menyiapkan cerita untukmu...' : 'Memproses pilihan...'}</p>
           </div>
         )}
 
@@ -230,12 +231,12 @@ export default function TopicSelectScreen() {
         {error && <div style={styles.error}>{error}</div>}
 
         {/* Waiting for audio - saat audio sedang diputar dan options belum muncul */}
-        {!showOptions && (
+        {!isLoading && !showOptions && (
           <div style={styles.waitingContainer}>
             <VoiceWaveform 
               audioData={audioData} 
               isActive={isPlaying} 
-              color="#42A5F5"
+              color={currentColor}
             />
             <button style={styles.skipButton} onClick={handleSkipAudio}>
               ⏭️ Lewati
@@ -243,19 +244,16 @@ export default function TopicSelectScreen() {
           </div>
         )}
 
-        {/* Topic Cards - muncul setelah audio selesai */}
-        {showOptions && (
-          <div style={styles.topicGrid}>
-            {topics.map((topic, index) => (
-              <TopicCard 
-                key={topic.id} 
-                topic={{
-                  ...topic,
-                  color: topicColors[topic.id] || '#666',
-                  icon: topicIcons[topic.id] || '💭',
-                }} 
+        {/* Problem Cards - muncul setelah audio selesai */}
+        {!isLoading && showOptions && (
+          <div style={styles.problemGrid}>
+            {problems.map((problem, index) => (
+              <ProblemCard 
+                key={problem.id} 
+                problem={problem}
+                color={currentColor}
                 index={index}
-                onSelect={() => handleSelectTopic(topic)}
+                onSelect={() => handleSelectProblem(problem)}
                 disabled={isLoading}
               />
             ))}
@@ -267,21 +265,19 @@ export default function TopicSelectScreen() {
 }
 
 /**
- * TopicCard - Kartu untuk setiap topik
+ * ProblemCard - Kartu untuk setiap masalah
  */
-function TopicCard({ topic, index, onSelect, disabled }) {
+function ProblemCard({ problem, color, index, onSelect, disabled }) {
   const [hovered, setHovered] = useState(false);
 
   return (
     <button
       style={{
-        ...styles.topicCard,
-        background: `linear-gradient(135deg, ${topic.color}ee, ${topic.color}aa)`,
+        ...styles.problemCard,
         animationDelay: `${index * 0.1}s`,
-        transform: hovered && !disabled ? 'translateY(-5px) scale(1.02)' : 'translateY(0)',
-        boxShadow: hovered && !disabled
-          ? `0 20px 40px ${topic.color}40`
-          : `0 10px 30px ${topic.color}30`,
+        transform: hovered && !disabled ? 'translateY(-3px)' : 'translateY(0)',
+        borderColor: hovered && !disabled ? color : 'rgba(255,255,255,0.1)',
+        boxShadow: hovered && !disabled ? `0 10px 30px ${color}30` : 'none',
         opacity: disabled ? 0.6 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
       }}
@@ -290,18 +286,12 @@ function TopicCard({ topic, index, onSelect, disabled }) {
       onMouseLeave={() => setHovered(false)}
       disabled={disabled}
     >
-      {/* Icon */}
-      <div style={styles.topicIcon}>{topic.icon}</div>
-      
-      <h3 style={styles.topicLabel}>{topic.label}</h3>
-      <p style={styles.topicDescription}>{topic.description}</p>
-      
-      <div style={styles.topicArrow}>
-        Pilih →
-      </div>
+      <h3 style={styles.problemTitle}>{problem.label}</h3>
+      <p style={styles.problemDescription}>{problem.description}</p>
     </button>
   );
 }
+
 
 const styles = {
   container: {
@@ -322,7 +312,7 @@ const styles = {
   },
   backButton: {
     position: 'absolute',
-    top: '8px',
+    top: '20px',
     left: '20px',
     padding: '10px 20px',
     background: 'rgba(255,255,255,0.1)',
@@ -333,81 +323,40 @@ const styles = {
     fontSize: '14px',
     transition: 'all 0.2s ease',
   },
-  audioButton: {
-    position: 'absolute',
-    top: '8px',
-    right: '20px',
-    padding: '10px 20px',
-    color: 'white',
-    border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '20px',
-    cursor: 'pointer',
+  progressContainer: {
+    marginBottom: '20px',
+  },
+  progressLabel: {
     fontSize: '14px',
-    transition: 'all 0.2s ease',
+    color: 'rgba(255,255,255,0.6)',
+    marginBottom: '8px',
+  },
+  progressBar: {
+    width: '200px',
+    height: '6px',
+    background: 'rgba(255,255,255,0.1)',
+    borderRadius: '3px',
+    margin: '0 auto',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: '3px',
+    transition: 'width 0.3s ease',
   },
   title: {
-    fontSize: '36px',
+    fontSize: '32px',
     fontWeight: '700',
     marginBottom: '10px',
     color: 'white',
   },
   subtitle: {
-    fontSize: '16px',
+    fontSize: '14px',
     color: 'rgba(255,255,255,0.7)',
-    maxWidth: '1800px',
-    margin: '0 auto 30px auto',  // 0 atas, auto kiri-kanan (tengah), 30px bawah
-    padding: '0 auto 20px',  // padding kiri-kanan 20px
-    textAlign: 'justify',
-    lineHeight: '1.6',
-  },
-  loading: {
-    fontSize: '18px',
-    color: 'white',
-  },
-  error: {
-    color: '#ff6b6b',
     marginBottom: '20px',
-    padding: '10px',
-    background: 'rgba(255,107,107,0.1)',
-    borderRadius: '8px',
-  },
-  topicGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '20px',
-    padding: '0 20px',
-  },
-  topicCard: {
-    padding: '30px',
-    borderRadius: '20px',
-    border: 'none',
-    cursor: 'pointer',
-    textAlign: 'left',
-    color: 'white',
-    transition: 'all 0.3s ease',
-    animation: 'fadeIn 0.5s ease forwards',
-    opacity: 0,
-    animationFillMode: 'forwards',
-  },
-  topicIcon: {
-    fontSize: '40px',
-    marginBottom: '15px',
-  },
-  topicLabel: {
-    fontSize: '22px',
-    fontWeight: '600',
-    marginBottom: '10px',
-  },
-  topicDescription: {
-    fontSize: '14px',
-    opacity: 0.9,
     lineHeight: '1.5',
-    marginBottom: '15px',
-  },
-  topicArrow: {
-    fontSize: '14px',
-    fontWeight: '500',
-    opacity: 0.8,
+    maxWidth: '1800px',
+    margin: '0 auto 20px',
   },
   loadingOverlay: {
     display: 'flex',
@@ -424,6 +373,54 @@ const styles = {
     borderTop: '3px solid white',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
+  },
+  error: {
+    color: '#ff6b6b',
+    marginBottom: '20px',
+    padding: '10px',
+    background: 'rgba(255,107,107,0.1)',
+    borderRadius: '8px',
+  },
+  problemGrid: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    padding: '0 20px',
+  },
+  problemCard: {
+    padding: '20px 25px',
+    borderRadius: '12px',
+    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'rgba(255,255,255,0.05)',
+    cursor: 'pointer',
+    textAlign: 'left',
+    color: 'white',
+    transition: 'all 0.3s ease',
+    animation: 'fadeIn 0.5s ease forwards',
+    opacity: 0,
+    animationFillMode: 'forwards',
+  },
+  problemTitle: {
+    fontSize: '18px',
+    fontWeight: '600',
+    marginBottom: '8px',
+    margin: 0,
+  },
+  problemDescription: {
+    fontSize: '14px',
+    opacity: 0.7,
+    lineHeight: '1.4',
+    margin: 0,
+  },
+  audioButton: {
+    padding: '10px 20px',
+    borderRadius: '20px',
+    border: '1px solid rgba(255,255,255,0.2)',
+    color: 'white',
+    cursor: 'pointer',
+    fontSize: '14px',
+    marginBottom: '20px',
+    transition: 'all 0.3s ease',
   },
   waitingContainer: {
     display: 'flex',

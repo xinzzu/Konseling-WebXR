@@ -1,18 +1,38 @@
-import React from "react";
+import React, { useState } from "react";
 import useGameStore from "../../store/useGameStore";
 import { ENVIRONMENTS } from "../xr/environments";
+import { startGreeting } from "../../services/chatService";
 
 /**
  * EnvironmentSelectScreen - Pilihan environment untuk mode 2D
+ * Saat memilih environment, akan memanggil API /chat untuk memulai sesi
  */
 export default function EnvironmentSelectScreen() {
-  const setGameState = useGameStore((s) => s.setGameState);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
   const selectedEnvironment = useGameStore((s) => s.selectedEnvironment);
   const setSelectedEnvironment = useGameStore((s) => s.setSelectedEnvironment);
+  const setGameState = useGameStore((s) => s.setGameState);
+  const handleBackendResponse = useGameStore((s) => s.handleBackendResponse);
 
-  const handleSelectEnvironment = (envId) => {
+  const handleSelectEnvironment = async (envId) => {
     setSelectedEnvironment(envId);
-    setGameState('topic_select');
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Panggil API backend untuk memulai sesi greeting
+      const response = await startGreeting();
+      // Reset loading SEBELUM handle response agar UI responsive
+      setIsLoading(false);
+      handleBackendResponse(response);
+      // State akan otomatis berubah ke 'topic_select' via handleBackendResponse
+    } catch (err) {
+      console.error('Failed to start session:', err);
+      setError('Gagal memulai sesi. Silakan coba lagi.');
+      setIsLoading(false);
+    }
   };
 
   const handleBack = () => {
@@ -26,6 +46,19 @@ export default function EnvironmentSelectScreen() {
         <h1 style={styles.title}>🌍 Pilih Suasana</h1>
         <p style={styles.subtitle}>Pilih tempat yang membuatmu nyaman</p>
 
+        {/* Loading State */}
+        {isLoading && (
+          <div style={styles.loadingOverlay}>
+            <div style={styles.spinner} />
+            <p>Memulai sesi...</p>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div style={styles.errorMessage}>{error}</div>
+        )}
+
         {/* Environment Cards */}
         <div style={styles.cardsContainer}>
           {ENVIRONMENTS.map((env) => (
@@ -37,11 +70,15 @@ export default function EnvironmentSelectScreen() {
                 background: selectedEnvironment === env.id 
                   ? `linear-gradient(135deg, ${env.color}20 0%, #1a1a2e 100%)`
                   : '#1a1a2e',
+                opacity: isLoading ? 0.5 : 1,
+                pointerEvents: isLoading ? 'none' : 'auto',
               }}
               onClick={() => handleSelectEnvironment(env.id)}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-5px)';
-                e.currentTarget.style.boxShadow = `0 10px 30px ${env.color}40`;
+                if (!isLoading) {
+                  e.currentTarget.style.transform = 'translateY(-5px)';
+                  e.currentTarget.style.boxShadow = `0 10px 30px ${env.color}40`;
+                }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
@@ -199,5 +236,28 @@ const styles = {
     background: 'radial-gradient(circle, rgba(79,195,247,0.1) 0%, transparent 70%)',
     bottom: '-50px',
     left: '-50px',
+  },
+  loadingOverlay: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '15px',
+    marginBottom: '20px',
+    color: 'white',
+  },
+  spinner: {
+    width: '40px',
+    height: '40px',
+    border: '3px solid rgba(255,255,255,0.2)',
+    borderTop: '3px solid white',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+  },
+  errorMessage: {
+    color: '#ff6b6b',
+    background: 'rgba(255,107,107,0.1)',
+    padding: '10px 20px',
+    borderRadius: '8px',
+    marginBottom: '20px',
   },
 };

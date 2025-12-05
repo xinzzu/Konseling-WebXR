@@ -12,7 +12,7 @@ class BackgroundMusicService {
     // Volume rendah untuk backsound (0.0 - 1.0)
     // === KUSTOMISASI VOLUME ===
     // Ubah nilai ini untuk mengatur volume backsound (0.0 = mute, 1.0 = max)
-    this.volume = 0.08; // 8% volume - sangat pelan untuk relaksasi
+    this.volume = 0.2; // 8% volume - sangat pelan untuk relaksasi
     this.intervalId = null;
   }
 
