@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Text, RoundedBox } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
+import { useXR } from "@react-three/xr";
 import Panel3D from "./Panel3D";
 import Button3D from "./Button3D";
 import useGameStore from "../../store/useGameStore";
@@ -13,6 +14,7 @@ import ttsService from "../../services/ttsService";
  * Menampilkan FULL text dengan font kecil agar muat
  */
 export default function Story3D() {
+  const { isPresenting } = useXR();
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasFinished, setHasFinished] = useState(false);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
@@ -26,6 +28,7 @@ export default function Story3D() {
   const setGameState = useGameStore((s) => s.setGameState);
   const setIsSpeaking = useGameStore((s) => s.setIsSpeaking);
   const handleBackendResponse = useGameStore((s) => s.handleBackendResponse);
+  const isInVR = useGameStore((s) => s.isInVR);
 
   // Topic colors
   const topicColors = {
@@ -35,20 +38,26 @@ export default function Story3D() {
   };
   const currentColor = topicColors[selectedTopic?.id] || "#66BB6A";
 
-  // Start background music on mount
+  // Start background music on mount (hanya jika dalam VR)
   useEffect(() => {
+    if (!isPresenting && !isInVR) return;
+    
     backgroundMusic.playAmbient();
     setIsMusicPlaying(true);
     
     return () => {
-      backgroundMusic.stop();
-      ttsService.stop();
-      setIsSpeaking(false);
+      if (isPresenting || isInVR) {
+        backgroundMusic.stop();
+        ttsService.stop();
+        setIsSpeaking(false);
+      }
     };
-  }, [setIsSpeaking]);
+  }, [setIsSpeaking, isPresenting, isInVR]);
 
-  // Auto-play audio on load
+  // Auto-play audio on load (hanya jika dalam VR)
   useEffect(() => {
+    if (!isPresenting && !isInVR) return;
+    
     const mode = ttsConfig?.mode || 'elevenlabs';
     if (mode === 'off') return;
 
@@ -57,9 +66,12 @@ export default function Story3D() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [isPresenting, isInVR]);
 
   const handlePlayAudio = () => {
+    // Hanya handle audio jika dalam VR mode
+    if (!isPresenting && !isInVR) return;
+    
     const mode = ttsConfig?.mode || 'elevenlabs';
     if (mode === 'off') return;
 
@@ -84,6 +96,9 @@ export default function Story3D() {
   };
 
   const handleStopAudio = () => {
+    // Hanya handle jika dalam VR mode
+    if (!isPresenting && !isInVR) return;
+    
     ttsService.stop();
     setIsPlaying(false);
     setIsSpeaking(false);

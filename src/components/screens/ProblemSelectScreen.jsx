@@ -65,6 +65,12 @@ export default function ProblemSelectScreen() {
       setShowOptions(false);
     }
 
+    // Jika tidak ada speechText dari backend, jangan play - tunggu data
+    if (!currentResponse?.speechText) {
+      console.log('ProblemSelect: Waiting for speechText from backend...');
+      return;
+    }
+
     // Jika mode delayed, set timer
     let delayTimer;
     if (OPTIONS_DISPLAY_MODE === "delayed") {
@@ -104,7 +110,7 @@ export default function ProblemSelectScreen() {
       ttsService.stop();
       setIsSpeaking(false);
     };
-  }, [currentAudio, ttsConfig, speechText, problemRound, setIsSpeaking]);
+  }, [currentAudio, ttsConfig, speechText, problemRound, setIsSpeaking, currentResponse]);
 
   // Handle play/stop audio manual
   const handleToggleAudio = () => {
@@ -298,65 +304,71 @@ const styles = {
     position: 'fixed',
     inset: 0,
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+    flexDirection: 'column',
+    justifyContent: 'flex-end',
+    background: 'transparent', // Transparan - 3D scene terlihat
     zIndex: 100,
     overflow: 'auto',
     padding: '20px',
+    paddingBottom: '100px',
+    pointerEvents: 'none',
   },
   content: {
     textAlign: 'center',
-    maxWidth: '1400px',
+    maxWidth: '700px',
     width: '100%',
+    margin: '0 auto',
+    pointerEvents: 'auto',
   },
   backButton: {
-    position: 'absolute',
+    position: 'fixed',
     top: '20px',
     left: '20px',
     padding: '10px 20px',
-    background: 'rgba(255,255,255,0.1)',
+    background: 'rgba(0,0,0,0.5)',
     color: 'white',
-    border: '1px solid rgba(255,255,255,0.2)',
+    border: 'none',
     borderRadius: '20px',
     cursor: 'pointer',
     fontSize: '14px',
     transition: 'all 0.2s ease',
+    pointerEvents: 'auto',
+    backdropFilter: 'blur(10px)',
   },
   progressContainer: {
-    marginBottom: '20px',
+    marginBottom: '15px',
   },
   progressLabel: {
-    fontSize: '14px',
-    color: 'rgba(255,255,255,0.6)',
-    marginBottom: '8px',
+    fontSize: '12px',
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: '6px',
   },
   progressBar: {
-    width: '200px',
-    height: '6px',
-    background: 'rgba(255,255,255,0.1)',
-    borderRadius: '3px',
+    width: '150px',
+    height: '4px',
+    background: 'rgba(255,255,255,0.2)',
+    borderRadius: '2px',
     margin: '0 auto',
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: '3px',
+    borderRadius: '2px',
     transition: 'width 0.3s ease',
   },
   title: {
-    fontSize: '32px',
-    fontWeight: '700',
-    marginBottom: '10px',
-    color: 'white',
+    display: 'none', // Hide title
   },
   subtitle: {
-    fontSize: '14px',
-    color: 'rgba(255,255,255,0.7)',
-    marginBottom: '20px',
+    fontSize: '15px',
+    color: 'white',
+    background: 'rgba(66, 165, 245, 0.9)', // Bubble biru
+    padding: '16px 20px',
+    borderRadius: '20px',
+    marginBottom: '15px',
+    textAlign: 'left',
     lineHeight: '1.5',
-    maxWidth: '1800px',
-    margin: '0 auto 20px',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
   },
   loadingOverlay: {
     display: 'flex',
@@ -384,14 +396,13 @@ const styles = {
   problemGrid: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
-    padding: '0 20px',
+    gap: '8px',
   },
   problemCard: {
-    padding: '20px 25px',
+    padding: '12px 16px',
     borderRadius: '12px',
-    border: '1px solid rgba(255,255,255,0.1)',
-    background: 'rgba(255,255,255,0.05)',
+    border: 'none',
+    background: 'rgba(30, 30, 50, 0.85)',
     cursor: 'pointer',
     textAlign: 'left',
     color: 'white',
@@ -399,48 +410,55 @@ const styles = {
     animation: 'fadeIn 0.5s ease forwards',
     opacity: 0,
     animationFillMode: 'forwards',
+    backdropFilter: 'blur(10px)',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
   },
   problemTitle: {
-    fontSize: '18px',
+    fontSize: '14px',
     fontWeight: '600',
-    marginBottom: '8px',
+    marginBottom: '4px',
     margin: 0,
   },
   problemDescription: {
-    fontSize: '14px',
+    fontSize: '12px',
     opacity: 0.7,
-    lineHeight: '1.4',
+    lineHeight: '1.3',
     margin: 0,
   },
   audioButton: {
+    position: 'fixed',
+    top: '20px',
+    right: '20px',
     padding: '10px 20px',
     borderRadius: '20px',
-    border: '1px solid rgba(255,255,255,0.2)',
+    border: 'none',
     color: 'white',
     cursor: 'pointer',
     fontSize: '14px',
-    marginBottom: '20px',
     transition: 'all 0.3s ease',
+    pointerEvents: 'auto',
+    backdropFilter: 'blur(10px)',
   },
   waitingContainer: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '20px',
-    padding: '60px 20px',
+    gap: '15px',
+    padding: '20px',
   },
   waitingText: {
-    fontSize: '24px',
+    fontSize: '14px',
     color: 'rgba(255,255,255,0.7)',
   },
   skipButton: {
-    padding: '12px 30px',
-    fontSize: '16px',
-    background: 'rgba(255,255,255,0.1)',
+    padding: '10px 24px',
+    fontSize: '14px',
+    background: 'rgba(0,0,0,0.5)',
     color: 'white',
-    border: '1px solid rgba(255,255,255,0.3)',
-    borderRadius: '25px',
+    border: 'none',
+    borderRadius: '20px',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
+    backdropFilter: 'blur(10px)',
   },
 };

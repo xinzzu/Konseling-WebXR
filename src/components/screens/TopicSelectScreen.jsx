@@ -73,6 +73,12 @@ export default function TopicSelectScreen() {
       setShowOptions(true);
     }
 
+    // Jika tidak ada speechText dari backend, tunggu dulu
+    if (!currentResponse?.speechText) {
+      console.log('TopicSelect: Waiting for speechText from backend...');
+      return;
+    }
+
     // Jika mode delayed, set timer
     let delayTimer;
     if (OPTIONS_DISPLAY_MODE === "delayed") {
@@ -113,7 +119,7 @@ export default function TopicSelectScreen() {
       ttsService.stop();
       setIsSpeaking(false);
     };
-  }, [currentAudio, ttsConfig, speechText, setIsSpeaking]);
+  }, [currentAudio, ttsConfig, speechText, setIsSpeaking, currentResponse]);
 
   const handleToggleAudio = () => {
     if (isPlaying) {
@@ -187,36 +193,32 @@ export default function TopicSelectScreen() {
     alam: '#FFA726',
   };
 
-  const topicIcons = {
-    diri: '🧘',
-    sosial: '👥',
-    alam: '🌿',
-  };
-
   return (
     <div style={styles.container}>
-      <div style={styles.content} className="fade-in">
-        {/* Back Button */}
+      {/* Fixed Header Buttons - terpisah dari content */}
+      <div style={styles.headerButtons}>
         <button style={styles.backButton} onClick={handleBack}>
           ← Kembali
         </button>
-
-        {/* Audio Button */}
         {ttsConfig?.mode !== 'off' && (
           <button 
             style={{
               ...styles.audioButton,
-              background: isPlaying ? '#42A5F5' : 'rgba(255,255,255,0.1)',
+              background: isPlaying ? 'rgba(66,165,245,0.8)' : 'rgba(0,0,0,0.5)',
             }} 
             onClick={handleToggleAudio}
           >
-            {isPlaying ? '🔊 ...' : '🔈 Putar'}
+            {isPlaying ? '🔊 Berbicara...' : '🔈 Putar'}
           </button>
         )}
+      </div>
 
-        {/* Header */}
-        <h2 style={styles.title}>Pilih Area Kedamaian</h2>
-        <p style={styles.subtitle}>{message}</p>
+      <div style={styles.content} className="fade-in">
+        {/* NPC Message Bubble */}
+        <div style={styles.messageRow}>
+          <div style={styles.avatar}>🧑‍⚕️</div>
+          <div style={styles.bubble}>{message}</div>
+        </div>
 
         {/* Loading State */}
         {isLoading && (
@@ -252,7 +254,6 @@ export default function TopicSelectScreen() {
                 topic={{
                   ...topic,
                   color: topicColors[topic.id] || '#666',
-                  icon: topicIcons[topic.id] || '💭',
                 }} 
                 index={index}
                 onSelect={() => handleSelectTopic(topic)}
@@ -267,7 +268,7 @@ export default function TopicSelectScreen() {
 }
 
 /**
- * TopicCard - Kartu untuk setiap topik
+ * TopicCard - Kartu untuk setiap topik (tanpa emoji)
  */
 function TopicCard({ topic, index, onSelect, disabled }) {
   const [hovered, setHovered] = useState(false);
@@ -278,10 +279,10 @@ function TopicCard({ topic, index, onSelect, disabled }) {
         ...styles.topicCard,
         background: `linear-gradient(135deg, ${topic.color}ee, ${topic.color}aa)`,
         animationDelay: `${index * 0.1}s`,
-        transform: hovered && !disabled ? 'translateY(-5px) scale(1.02)' : 'translateY(0)',
+        transform: hovered && !disabled ? 'translateY(-2px)' : 'translateY(0)',
         boxShadow: hovered && !disabled
-          ? `0 20px 40px ${topic.color}40`
-          : `0 10px 30px ${topic.color}30`,
+          ? `0 8px 25px ${topic.color}50`
+          : `0 4px 15px rgba(0,0,0,0.3)`,
         opacity: disabled ? 0.6 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
       }}
@@ -290,15 +291,8 @@ function TopicCard({ topic, index, onSelect, disabled }) {
       onMouseLeave={() => setHovered(false)}
       disabled={disabled}
     >
-      {/* Icon */}
-      <div style={styles.topicIcon}>{topic.icon}</div>
-      
       <h3 style={styles.topicLabel}>{topic.label}</h3>
       <p style={styles.topicDescription}>{topic.description}</p>
-      
-      <div style={styles.topicArrow}>
-        Pilih →
-      </div>
     </button>
   );
 }
@@ -308,57 +302,85 @@ const styles = {
     position: 'fixed',
     inset: 0,
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+    flexDirection: 'column',
+    justifyContent: 'flex-end',
+    background: 'transparent',
     zIndex: 100,
     overflow: 'auto',
     padding: '20px',
+    paddingBottom: '80px',
+    pointerEvents: 'none',
+  },
+  headerButtons: {
+    position: 'fixed',
+    top: '20px',
+    left: '20px',
+    right: '20px',
+    display: 'flex',
+    justifyContent: 'space-between',
+    pointerEvents: 'auto',
+    zIndex: 110,
   },
   content: {
-    textAlign: 'center',
-    maxWidth: '1400px',
+    maxWidth: '500px',
     width: '100%',
+    margin: '0 auto',
+    pointerEvents: 'auto',
   },
   backButton: {
-    position: 'absolute',
-    top: '8px',
-    left: '20px',
     padding: '10px 20px',
-    background: 'rgba(255,255,255,0.1)',
+    background: 'rgba(0,0,0,0.6)',
     color: 'white',
-    border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '20px',
+    border: 'none',
+    borderRadius: '25px',
     cursor: 'pointer',
     fontSize: '14px',
-    transition: 'all 0.2s ease',
+    backdropFilter: 'blur(10px)',
   },
   audioButton: {
-    position: 'absolute',
-    top: '8px',
-    right: '20px',
     padding: '10px 20px',
     color: 'white',
-    border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '20px',
+    border: 'none',
+    borderRadius: '25px',
     cursor: 'pointer',
     fontSize: '14px',
-    transition: 'all 0.2s ease',
+    backdropFilter: 'blur(10px)',
+  },
+  messageRow: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '12px',
+    marginBottom: '15px',
+  },
+  avatar: {
+    width: '45px',
+    height: '45px',
+    borderRadius: '50%',
+    background: 'rgba(66,165,245,0.9)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '22px',
+    flexShrink: 0,
+    boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+  },
+  bubble: {
+    flex: 1,
+    fontSize: '14px',
+    color: 'white',
+    background: 'rgba(66, 165, 245, 0.9)',
+    padding: '14px 18px',
+    borderRadius: '18px',
+    borderTopLeftRadius: '4px',
+    textAlign: 'left',
+    lineHeight: '1.5',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
   },
   title: {
-    fontSize: '36px',
-    fontWeight: '700',
-    marginBottom: '10px',
-    color: 'white',
+    display: 'none',
   },
   subtitle: {
-    fontSize: '16px',
-    color: 'rgba(255,255,255,0.7)',
-    maxWidth: '1800px',
-    margin: '0 auto 30px auto',  // 0 atas, auto kiri-kanan (tengah), 30px bawah
-    padding: '0 auto 20px',  // padding kiri-kanan 20px
-    textAlign: 'justify',
-    lineHeight: '1.6',
+    display: 'none',
   },
   loading: {
     fontSize: '18px',
@@ -372,14 +394,13 @@ const styles = {
     borderRadius: '8px',
   },
   topicGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '20px',
-    padding: '0 20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
   },
   topicCard: {
-    padding: '30px',
-    borderRadius: '20px',
+    padding: '14px 18px',
+    borderRadius: '15px',
     border: 'none',
     cursor: 'pointer',
     textAlign: 'left',
@@ -388,26 +409,22 @@ const styles = {
     animation: 'fadeIn 0.5s ease forwards',
     opacity: 0,
     animationFillMode: 'forwards',
-  },
-  topicIcon: {
-    fontSize: '40px',
-    marginBottom: '15px',
+    backdropFilter: 'blur(10px)',
   },
   topicLabel: {
-    fontSize: '22px',
+    fontSize: '15px',
     fontWeight: '600',
-    marginBottom: '10px',
+    marginBottom: '4px',
+    margin: 0,
   },
   topicDescription: {
-    fontSize: '14px',
+    fontSize: '12px',
     opacity: 0.9,
-    lineHeight: '1.5',
-    marginBottom: '15px',
+    lineHeight: '1.4',
+    marginBottom: '0',
   },
   topicArrow: {
-    fontSize: '14px',
-    fontWeight: '500',
-    opacity: 0.8,
+    display: 'none', // Hide arrow
   },
   loadingOverlay: {
     display: 'flex',
@@ -429,21 +446,22 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '20px',
-    padding: '60px 20px',
+    gap: '15px',
+    padding: '20px',
   },
   waitingText: {
-    fontSize: '24px',
+    fontSize: '14px',
     color: 'rgba(255,255,255,0.7)',
   },
   skipButton: {
-    padding: '12px 30px',
-    fontSize: '16px',
-    background: 'rgba(255,255,255,0.1)',
+    padding: '10px 24px',
+    fontSize: '14px',
+    background: 'rgba(0,0,0,0.5)',
     color: 'white',
-    border: '1px solid rgba(255,255,255,0.3)',
-    borderRadius: '25px',
+    border: 'none',
+    borderRadius: '20px',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
+    backdropFilter: 'blur(10px)',
   },
 };

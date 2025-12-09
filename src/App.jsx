@@ -86,6 +86,9 @@ export default function App() {
       {/* UI 2D Layers - hanya tampil saat TIDAK dalam VR */}
       {!isInVR && (
         <>
+          {/* Dark overlay untuk fokus ke UI - tampil setelah start screen */}
+          {gameState !== 'start' && <div style={styles.overlay} />}
+          
           {gameState === 'start' && <StartScreen />}
           {gameState === 'environment_select' && <EnvironmentSelectScreen />}
           {gameState === 'topic_select' && <TopicSelectScreen />}
@@ -107,5 +110,15 @@ const styles = {
     height: '100vh',
     overflow: 'hidden',
     position: 'relative',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    pointerEvents: 'none',
+    zIndex: 5,
   },
 };

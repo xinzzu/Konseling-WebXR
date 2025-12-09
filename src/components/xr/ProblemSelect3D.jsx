@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Text, RoundedBox } from "@react-three/drei";
+import { useXR } from "@react-three/xr";
 import Panel3D from "./Panel3D";
 import Button3D from "./Button3D";
 import VoiceWaveform3D from "./VoiceWaveform3D";
@@ -24,6 +25,7 @@ const DELAY_MS = 3000; // Delay dalam ms jika mode "delayed"
  * ProblemSelect3D - Pilihan masalah dalam bentuk 3D untuk VR
  */
 export default function ProblemSelect3D() {
+  const { isPresenting } = useXR();
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showOptions, setShowOptions] = useState(OPTIONS_DISPLAY_MODE === "instant");
@@ -37,12 +39,18 @@ export default function ProblemSelect3D() {
   const handleBackendResponse = useGameStore((s) => s.handleBackendResponse);
   const setGameState = useGameStore((s) => s.setGameState);
   const setIsSpeaking = useGameStore((s) => s.setIsSpeaking);
+  const isInVR = useGameStore((s) => s.isInVR);
 
   const message = currentResponse?.message || 'Pilih masalah yang paling menggambarkan kondisimu';
   const speechText = currentResponse?.speechText || message;
 
-  // Auto-play audio saat masuk halaman atau round berubah
+  // Auto-play audio HANYA saat dalam VR mode
   useEffect(() => {
+    // Skip audio handling jika tidak dalam VR - biarkan 2D component handle
+    if (!isPresenting && !isInVR) {
+      return;
+    }
+
     // Stop previous audio
     ttsService.stop();
 
@@ -52,6 +60,12 @@ export default function ProblemSelect3D() {
     } else {
       // Mode after_audio atau delayed - hide dulu
       setShowOptions(false);
+    }
+
+    // Jika tidak ada speechText dari backend, tunggu dulu
+    if (!currentResponse?.speechText) {
+      console.log('ProblemSelect3D: Waiting for speechText from backend...');
+      return;
     }
 
     // Jika mode delayed, set timer
@@ -91,12 +105,27 @@ export default function ProblemSelect3D() {
     return () => {
       clearTimeout(timer);
       if (delayTimer) clearTimeout(delayTimer);
-      ttsService.stop();
-      setIsSpeaking(false);
+      if (isPresenting || isInVR) {
+        ttsService.stop();
+        setIsSpeaking(false);
+      }
     };
-  }, [currentAudio, ttsConfig, speechText, problemRound, setIsSpeaking]);
+  }, [currentAudio, ttsConfig, speechText, problemRound, setIsSpeaking, isPresenting, isInVR, currentResponse]);
+
+  // Sync showOptions dengan isSpeaking dari store (untuk mode 2D)
+  const isSpeakingFromStore = useGameStore((s) => s.isSpeaking);
+  useEffect(() => {
+    if (!isPresenting && !isInVR) {
+      if (OPTIONS_DISPLAY_MODE === "after_audio") {
+        setShowOptions(!isSpeakingFromStore);
+      }
+    }
+  }, [isSpeakingFromStore, isPresenting, isInVR]);
 
   const handleToggleAudio = () => {
+    // Hanya handle audio jika dalam VR mode
+    if (!isPresenting && !isInVR) return;
+    
     if (isPlaying) {
       ttsService.stop();
       setIsPlaying(false);
@@ -133,6 +162,9 @@ export default function ProblemSelect3D() {
 
   // Skip audio dan langsung tampilkan options
   const handleSkipAudio = () => {
+    // Hanya handle jika dalam VR mode
+    if (!isPresenting && !isInVR) return;
+    
     ttsService.stop();
     setIsPlaying(false);
     setIsSpeaking(false);

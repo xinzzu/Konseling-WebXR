@@ -67,38 +67,21 @@ export default function MainScene() {
       {/* Selected Environment */}
       <SelectedEnvironment environmentId={selectedEnvironment} />
 
-      {/* 3D UI - tampil di VR mode ATAU untuk testing */}
-      {(isPresenting || true) && (
-        <>
-          {gameState === 'start' && <StartScreen3D />}
-          {gameState === 'environment_select' && <EnvironmentSelect3D />}
-          {gameState === 'topic_select' && (
-            <>
-              <ConversationNPC />
-              <TopicSelect3D />
-            </>
-          )}
-          {gameState === 'problem_select' && (
-            <>
-              <ConversationNPC />
-              <ProblemSelect3D />
-            </>
-          )}
-          {gameState === 'story' && (
-            <>
-              <ConversationNPC />
-              <Story3D />
-            </>
-          )}
-          {(gameState === 'conversation' || gameState === 'finished') && (
-            <>
-              {/* NPC Counselor - di samping panel conversation */}
-              <ConversationNPC />
-              <Conversation3D />
-            </>
-          )}
-        </>
+      {/* NPC - selalu tampil di state tertentu (visible di background mode 2D) */}
+      {(gameState === 'topic_select' || gameState === 'problem_select' || 
+        gameState === 'story' || gameState === 'conversation' || gameState === 'finished') && (
+        <ConversationNPC />
       )}
+
+      {/* 3D UI Panels - SELALU render berdasarkan gameState
+          Ini memastikan saat user switch ke VR di tengah flow,
+          panel 3D langsung tersedia dan sinkron dengan state saat ini */}
+      {gameState === 'start' && <StartScreen3D />}
+      {gameState === 'environment_select' && <EnvironmentSelect3D />}
+      {gameState === 'topic_select' && <TopicSelect3D />}
+      {gameState === 'problem_select' && <ProblemSelect3D />}
+      {gameState === 'story' && <Story3D />}
+      {(gameState === 'conversation' || gameState === 'finished') && <Conversation3D />}
 
       {/* XR Pointer rays untuk VR interaction */}
       <XRPointer />

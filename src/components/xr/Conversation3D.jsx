@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Text, RoundedBox } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
+import { useXR } from "@react-three/xr";
 import Panel3D from "./Panel3D";
 import Button3D from "./Button3D";
 import useGameStore from "../../store/useGameStore";
@@ -11,6 +12,7 @@ import backgroundMusic from "../../services/backgroundMusic";
  * Conversation3D - Panel percakapan dalam bentuk 3D untuk VR
  */
 export default function Conversation3D() {
+  const { isPresenting } = useXR();
   const selectedTopic = useGameStore((s) => s.selectedTopic);
   const conversations = useGameStore((s) => s.conversations);
   const currentIndex = useGameStore((s) => s.currentConversationIndex);
@@ -20,6 +22,7 @@ export default function Conversation3D() {
   const resetGame = useGameStore((s) => s.resetGame);
   const startSession = useGameStore((s) => s.startSession);
   const setIsSpeakingGlobal = useGameStore((s) => s.setIsSpeaking);
+  const isInVR = useGameStore((s) => s.isInVR);
 
   const [isSpeaking, setIsSpeakingLocal] = useState(false);
   const [showChoices, setShowChoices] = useState(false);
@@ -38,14 +41,22 @@ export default function Conversation3D() {
   const isUserChoice = currentMessage?.role === 'user_choice';
   const isFinished = currentIndex >= conversations.length || !currentMessage;
 
-  // Setup speech callbacks
+  // Setup speech callbacks (hanya jika dalam VR)
   useEffect(() => {
+    if (!isPresenting && !isInVR) return;
+    
     speechService.setSpeakingCallback(setIsSpeaking);
-    return () => speechService.stop();
-  }, []);
+    return () => {
+      if (isPresenting || isInVR) {
+        speechService.stop();
+      }
+    };
+  }, [isPresenting, isInVR]);
 
-  // Start background music saat conversation dimulai
+  // Start background music saat conversation dimulai (hanya jika dalam VR)
   useEffect(() => {
+    if (!isPresenting && !isInVR) return;
+    
     // Mulai musik relaksasi saat conversation aktif
     if (selectedTopic && !isFinished) {
       backgroundMusic.playAmbient();
@@ -55,11 +66,14 @@ export default function Conversation3D() {
     return () => {
       // Jangan stop langsung, biarkan musik terus berjalan sampai user keluar
     };
-  }, [selectedTopic]);
+  }, [selectedTopic, isPresenting, isInVR]);
 
-  // Speak function
+  // Speak function (hanya jika dalam VR)
   const speakMessage = useCallback((text) => {
     if (!text) return;
+    // Hanya speak jika dalam VR mode
+    if (!isPresenting && !isInVR) return;
+    
     setNeedsFirstClick(false);
     
     speechService.speak(text, {
@@ -75,7 +89,7 @@ export default function Conversation3D() {
       setIsSpeaking(false);
       setHasSpoken(true);
     });
-  }, [conversations, currentIndex]);
+  }, [conversations, currentIndex, isPresenting, isInVR]);
 
   // Auto-speak after first interaction
   useEffect(() => {
