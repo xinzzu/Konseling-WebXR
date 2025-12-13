@@ -5,6 +5,8 @@ import useGameStore from "../../store/useGameStore";
 import StartScreen3D from "./StartScreen3D";
 import EnvironmentSelect3D from "./EnvironmentSelect3D";
 import TopicSelect3D from "./TopicSelect3D";
+import ProblemSelect3D from "./ProblemSelect3D";
+import Story3D from "./Story3D";
 import Conversation3D from "./Conversation3D";
 import XRPointer from "./XRPointer";
 import NPCCounselor from "./NPCCounselor";
@@ -65,21 +67,21 @@ export default function MainScene() {
       {/* Selected Environment */}
       <SelectedEnvironment environmentId={selectedEnvironment} />
 
-      {/* 3D UI - tampil di VR mode ATAU untuk testing */}
-      {(isPresenting || true) && (
-        <>
-          {gameState === 'start' && <StartScreen3D />}
-          {gameState === 'environment_select' && <EnvironmentSelect3D />}
-          {gameState === 'topic_select' && <TopicSelect3D />}
-          {(gameState === 'conversation' || gameState === 'finished') && (
-            <>
-              {/* NPC Counselor - di samping panel conversation */}
-              <ConversationNPC />
-              <Conversation3D />
-            </>
-          )}
-        </>
+      {/* NPC - selalu tampil di state tertentu (visible di background mode 2D) */}
+      {(gameState === 'topic_select' || gameState === 'problem_select' || 
+        gameState === 'story' || gameState === 'conversation' || gameState === 'finished') && (
+        <ConversationNPC />
       )}
+
+      {/* 3D UI Panels - SELALU render berdasarkan gameState
+          Ini memastikan saat user switch ke VR di tengah flow,
+          panel 3D langsung tersedia dan sinkron dengan state saat ini */}
+      {gameState === 'start' && <StartScreen3D />}
+      {gameState === 'environment_select' && <EnvironmentSelect3D />}
+      {gameState === 'topic_select' && <TopicSelect3D />}
+      {gameState === 'problem_select' && <ProblemSelect3D />}
+      {gameState === 'story' && <Story3D />}
+      {(gameState === 'conversation' || gameState === 'finished') && <Conversation3D />}
 
       {/* XR Pointer rays untuk VR interaction */}
       <XRPointer />
@@ -104,8 +106,50 @@ function SelectedEnvironment({ environmentId }) {
 
 /**
  * ConversationNPC - NPC Konselor yang tampil saat conversation
- * Posisi di samping kiri panel conversation
+ * 
+ * ============================================
+ * CUSTOMIZATION - Ubah sesuai kebutuhan per state
+ * ============================================
+ * position: [x, y, z] - posisi NPC dalam scene
+ *   - x: kiri/kanan (negatif = kiri)
+ *   - y: tinggi
+ *   - z: depan/belakang (negatif = depan user)
+ * 
+ * rotation: [x, y, z] - rotasi dalam RADIAN
+ *   - y positif = rotate ke kanan (searah jarum jam dari atas)
+ *   - y negatif = rotate ke kiri
+ *   - Math.PI = 180 derajat
+ *   - Math.PI / 2 = 90 derajat
+ *   - Math.PI / 4 = 45 derajat
+ *   - Math.PI / 6 = 30 derajat
  */
+const NPC_CONFIG = {
+  // Default config untuk conversation/finished
+  default: {
+    position: [-1.2, 1.0, -1.2],
+    rotation: [0, Math.PI / 6, 0],
+    scale: 1.2,
+  },
+  // Config untuk topic_select - panel lebih kecil
+  topic_select: {
+    position: [-1.5, 1.0, -1.0],
+    rotation: [0, Math.PI / 5, 0],
+    scale: 1.2,
+  },
+  // Config untuk problem_select - panel lebih lebar, NPC lebih ke kiri
+  problem_select: {
+    position: [-2.0, 1.0, -0.5],
+    rotation: [0, Math.PI / 4, 0],
+    scale: 1.2,
+  },
+  // Config untuk story - panel lebar
+  story: {
+    position: [-2.0, 1.0, -0.5],
+    rotation: [0, Math.PI / 4, 0],
+    scale: 1.2,
+  },
+};
+
 function ConversationNPC() {
   const isSpeaking = useGameStore((s) => s.isSpeaking);
   const gameState = useGameStore((s) => s.gameState);
@@ -113,14 +157,16 @@ function ConversationNPC() {
   // Tentukan mood berdasarkan gameState
   const mood = gameState === 'finished' ? 'happy' : 'neutral';
   
+  // Pilih config berdasarkan gameState
+  const config = NPC_CONFIG[gameState] || NPC_CONFIG.default;
+  
   return (
     <NPCCounselor
-      // Posisi: di samping kiri panel conversation
-      // Panel ada di [0, 1.8, -1.5], NPC di sebelah kiri
-      position={[-1.2, 1.0, -1.2]}
+      position={config.position}
+      rotation={config.rotation}
       isSpeaking={isSpeaking}
       mood={mood}
-      scale={1.2}
+      scale={config.scale}
     />
   );
 }

@@ -1,12 +1,35 @@
-import React from "react";
+import { useState, useEffect } from "react";
 import useGameStore from "../../store/useGameStore";
+import backgroundMusic from "../../services/backgroundMusic";
 
 /**
  * StartScreen - Layar pertama saat aplikasi dibuka
  * Menampilkan judul game dan tombol Start
  */
 export default function StartScreen() {
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const setGameState = useGameStore((s) => s.setGameState);
+
+  // Start background music on mount
+  useEffect(() => {
+    // Auto-start backsound saat masuk
+    backgroundMusic.playAmbient();
+    setIsMusicPlaying(true);
+
+    return () => {
+      // Jangan stop musik saat pindah screen
+    };
+  }, []);
+
+  const handleToggleMusic = () => {
+    if (isMusicPlaying) {
+      backgroundMusic.stop();
+      setIsMusicPlaying(false);
+    } else {
+      backgroundMusic.playAmbient();
+      setIsMusicPlaying(true);
+    }
+  };
 
   const handleStart = () => {
     // Ke environment select dulu
@@ -57,6 +80,23 @@ export default function StartScreen() {
         <p style={styles.vrInfo}>
           💡 Klik tombol "Enter VR" di bawah untuk pengalaman immersive
         </p>
+
+        {/* Music Toggle Button */}
+        <button
+          style={{
+            ...styles.musicButton,
+            background: isMusicPlaying ? '#9C27B0' : '#555',
+          }}
+          onClick={handleToggleMusic}
+          onMouseEnter={(e) => {
+            e.target.style.opacity = '0.8';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.opacity = '1';
+          }}
+        >
+          {isMusicPlaying ? '🎵 Musik ON' : '🔇 Musik OFF'}
+        </button>
       </div>
 
       {/* Background decoration */}
@@ -125,6 +165,18 @@ const styles = {
     marginTop: '30px',
     fontSize: '14px',
     color: 'rgba(255,255,255,0.5)',
+  },
+  musicButton: {
+    position: 'absolute',
+    top: '20px',
+    right: '20px',
+    padding: '10px 20px',
+    fontSize: '14px',
+    color: 'white',
+    border: 'none',
+    borderRadius: '25px',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
   },
   bgCircle1: {
     position: 'absolute',

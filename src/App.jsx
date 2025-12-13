@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import useGameStore from "./store/useGameStore";
 import XRCanvas from "./components/xr/XRCanvas";
 import VRButton from "./components/xr/VRButton";
@@ -6,6 +6,8 @@ import MainScene from "./components/xr/MainScene";
 import StartScreen from "./components/screens/StartScreen";
 import EnvironmentSelectScreen from "./components/screens/EnvironmentSelectScreen";
 import TopicSelectScreen from "./components/screens/TopicSelectScreen";
+import ProblemSelectScreen from "./components/screens/ProblemSelectScreen";
+import StoryScreen from "./components/screens/StoryScreen";
 import ConversationPanel from "./components/ui/ConversationPanel";
 
 /**
@@ -84,9 +86,14 @@ export default function App() {
       {/* UI 2D Layers - hanya tampil saat TIDAK dalam VR */}
       {!isInVR && (
         <>
+          {/* Dark overlay untuk fokus ke UI - tampil setelah start screen */}
+          {gameState !== 'start' && <div style={styles.overlay} />}
+          
           {gameState === 'start' && <StartScreen />}
           {gameState === 'environment_select' && <EnvironmentSelectScreen />}
           {gameState === 'topic_select' && <TopicSelectScreen />}
+          {gameState === 'problem_select' && <ProblemSelectScreen />}
+          {gameState === 'story' && <StoryScreen />}
           {(gameState === 'conversation' || gameState === 'finished') && <ConversationPanel />}
         </>
       )}
@@ -103,5 +110,15 @@ const styles = {
     height: '100vh',
     overflow: 'hidden',
     position: 'relative',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    pointerEvents: 'none',
+    zIndex: 5,
   },
 };

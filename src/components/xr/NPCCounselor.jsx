@@ -16,8 +16,19 @@ import * as THREE from "three";
  * - isSpeaking: boolean apakah sedang berbicara
  * - mood: 'neutral' | 'happy' | 'concerned' - ekspresi wajah
  */
+/**
+ * ============================================
+ * NPC CUSTOMIZATION CONFIG
+ * ============================================
+ * rotation: [x, y, z] dalam radian
+ *   - y positif = rotate ke kanan (searah jarum jam dari atas)
+ *   - y negatif = rotate ke kiri
+ *   - Contoh: rotation={[0, Math.PI / 4, 0]} = 45 derajat ke kanan
+ *   - Contoh: rotation={[0, -Math.PI / 6, 0]} = 30 derajat ke kiri
+ */
 export default function NPCCounselor({ 
   position = [0, 0, 0], 
+  rotation = [0, 0, 0], // [x, y, z] dalam radian
   isSpeaking = false,
   mood = 'neutral',
   scale = 1 
@@ -124,7 +135,7 @@ export default function NPCCounselor({
   });
 
   return (
-    <group ref={groupRef} position={position} scale={scale}>
+    <group ref={groupRef} position={position} rotation={rotation} scale={scale}>
       {/* Body Group */}
       <group ref={bodyRef}>
         
@@ -297,7 +308,7 @@ export default function NPCCounselor({
         outlineWidth={0.003}
         outlineColor="#000000"
       >
-        Konselor Maya
+        Konselor Ardi
       </Text>
       
       {/* Speaking indicator */}
