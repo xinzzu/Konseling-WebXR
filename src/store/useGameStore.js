@@ -107,9 +107,15 @@ const useGameStore = create((set, get) => ({
   isInVR: false,
   setIsInVR: (inVR) => set({ isInVR: inVR }),
 
+  // Mockup mode - true = pakai data dummy lokal (mockChatService),
+  // false = pakai backend live (VITE_API_URL). Tidak mengubah flow lain.
+  isMockMode: false,
+  setMockMode: (enabled) => set({ isMockMode: !!enabled }),
+
   // Reset everything
   resetGame: () => set({
     gameState: 'start',
+    isMockMode: false,
     sessionId: null,
     currentResponse: null,
     selectedTopic: null,

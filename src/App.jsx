@@ -9,6 +9,7 @@ import TopicSelectScreen from "./components/screens/TopicSelectScreen";
 import ProblemSelectScreen from "./components/screens/ProblemSelectScreen";
 import StoryScreen from "./components/screens/StoryScreen";
 import ConversationPanel from "./components/ui/ConversationPanel";
+import MockModeBadge from "./components/ui/MockModeBadge";
 
 /**
  * App - Main application component
@@ -100,6 +101,9 @@ export default function App() {
 
       {/* VR Button - selalu tampil untuk toggle VR mode */}
       <VRButton />
+
+      {/* Indikator Mode Mockup */}
+      <MockModeBadge />
     </div>
   );
 }

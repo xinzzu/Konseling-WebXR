@@ -1,9 +1,24 @@
 /**
  * Chat Service - Integrasi dengan backend konseling AI
  * Endpoint: https://webxr-be.vercel.app/chat
+ *
+ * MODE MOCKUP: jika useGameStore.isMockMode = true, semua fungsi di bawah
+ * otomatis didelegasikan ke mockChatService (data dummy lokal).
+ * Screen 2D maupun 3D TIDAK perlu diubah karena signature-nya sama persis.
  */
+import useGameStore from "../store/useGameStore";
+import * as mockChat from "./mockChatService";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://webxr-be.vercel.app';
+
+/** Cek apakah sedang mode mockup (baca langsung dari store, tanpa subscribe). */
+function useMock() {
+  try {
+    return useGameStore.getState()?.isMockMode === true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Session state untuk tracking conversation
@@ -14,6 +29,7 @@ let currentSessionId = null;
  * Reset session
  */
 export function resetSession() {
+  mockChat.resetSession();
   currentSessionId = null;
 }
 
@@ -21,6 +37,7 @@ export function resetSession() {
  * Get current session ID
  */
 export function getSessionId() {
+  if (useMock()) return mockChat.getSessionId();
   return currentSessionId;
 }
 
@@ -67,6 +84,10 @@ export async function sendChatRequest(state, payload = {}) {
  * Dipanggil saat user memilih environment/suasana
  */
 export async function startGreeting() {
+  if (useMock()) {
+    currentSessionId = null;
+    return mockChat.startGreeting();
+  }
   resetSession();
   return sendChatRequest('greeting');
 }
@@ -76,6 +97,7 @@ export async function startGreeting() {
  * @param {string} topicId - 'diri' | 'sosial' | 'alam'
  */
 export async function selectTopic(topicId) {
+  if (useMock()) return mockChat.selectTopic(topicId);
   return sendChatRequest('identify_topic', { topicId });
 }
 
@@ -84,6 +106,7 @@ export async function selectTopic(topicId) {
  * @param {string} problemId - ID masalah yang dipilih
  */
 export async function selectProblem(problemId) {
+  if (useMock()) return mockChat.selectProblem(problemId);
   return sendChatRequest('collecting_problem', { problemId });
 }
 
@@ -92,6 +115,7 @@ export async function selectProblem(problemId) {
  * @param {string} topicId - ID topik (opsional, jika tidak ada akan gunakan topik sebelumnya)
  */
 export async function restartSession(topicId = null) {
+  if (useMock()) return mockChat.restartSession(topicId);
   return sendChatRequest('restart_session', { topicId });
 }
 

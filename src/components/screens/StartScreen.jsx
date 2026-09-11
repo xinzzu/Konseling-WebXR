@@ -9,6 +9,7 @@ import backgroundMusic from "../../services/backgroundMusic";
 export default function StartScreen() {
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const setGameState = useGameStore((s) => s.setGameState);
+  const setMockMode = useGameStore((s) => s.setMockMode);
 
   // Start background music on mount
   useEffect(() => {
@@ -32,7 +33,15 @@ export default function StartScreen() {
   };
 
   const handleStart = () => {
+    // Mode live (backend VITE_API_URL)
+    setMockMode(false);
     // Ke environment select dulu
+    setGameState('environment_select');
+  };
+
+  const handleStartMock = () => {
+    // Mode mockup/dummy (data lokal, tanpa backend LLM)
+    setMockMode(true);
     setGameState('environment_select');
   };
 
@@ -75,6 +84,25 @@ export default function StartScreen() {
         >
           MULAI
         </button>
+
+        {/* Mockup Mode Button - data dummy lokal, alur sama persis */}
+        <button
+          style={styles.mockButton}
+          onClick={handleStartMock}
+          onMouseEnter={(e) => {
+            e.target.style.background = '#FF8F00';
+            e.target.style.transform = 'scale(1.05)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = '#FFA726';
+            e.target.style.transform = 'scale(1)';
+          }}
+        >
+          🧪 MODE MOCKUP (Dummy)
+        </button>
+        <p style={styles.mockHint}>
+          Tanpa backend LLM — pilihan topik, masalah & cerita sudah tersedia
+        </p>
 
         {/* VR Info */}
         <p style={styles.vrInfo}>
@@ -160,6 +188,25 @@ const styles = {
     boxShadow: '0 10px 30px rgba(76, 175, 80, 0.4)',
     transition: 'all 0.3s ease',
     letterSpacing: '2px',
+  },
+  mockButton: {
+    marginTop: '14px',
+    padding: '14px 40px',
+    fontSize: '16px',
+    fontWeight: '600',
+    background: '#FFA726',
+    color: '#1a1a2e',
+    border: 'none',
+    borderRadius: '50px',
+    cursor: 'pointer',
+    boxShadow: '0 10px 30px rgba(255, 167, 38, 0.35)',
+    transition: 'all 0.3s ease',
+    letterSpacing: '1px',
+  },
+  mockHint: {
+    marginTop: '10px',
+    fontSize: '13px',
+    color: 'rgba(255,255,255,0.55)',
   },
   vrInfo: {
     marginTop: '30px',
