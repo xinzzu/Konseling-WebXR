@@ -19,6 +19,7 @@ export default function Button3D({
   onClick,
   disabled = false,
   playSound = true, // Enable/disable sound per button
+  pulse = false, // Berdenyut halus = sinyal "sudah boleh dilanjut" (audio selesai)
 }) {
   const meshRef = useRef();
   const groupRef = useRef();
@@ -26,10 +27,12 @@ export default function Button3D({
   const [pressed, setPressed] = useState(false);
 
   // Animation
-  useFrame(() => {
+  useFrame(({ clock }) => {
     if (!meshRef.current) return;
-    
-    const targetScale = pressed ? 0.95 : hovered ? 1.05 : 1;
+
+    const t = clock?.elapsedTime ?? 0;
+    const pulseScale = 1 + Math.sin(t * 3) * 0.045;
+    const targetScale = pressed ? 0.95 : hovered ? 1.08 : pulse ? pulseScale : 1;
     meshRef.current.scale.lerp(
       new THREE.Vector3(targetScale, targetScale, targetScale), 
       0.2

@@ -21,7 +21,8 @@ class SpeechService {
     if (!this.synth) return;
     
     const setVoices = () => {
-      this.voices = this.synth.getVoices();
+      const raw = this.synth.getVoices();
+      this.voices = Array.isArray(raw) ? raw : [];
     };
     
     setVoices();
@@ -37,15 +38,16 @@ class SpeechService {
 
   // Get Indonesian voice or fallback
   getPreferredVoice() {
+    const list = Array.isArray(this.voices) ? this.voices : [];
     // Prefer Indonesian voice
-    let voice = this.voices.find(v => v.lang.includes('id') || v.lang.includes('ID'));
-    
+    let voice = list.find(v => v.lang.includes('id') || v.lang.includes('ID'));
+
     // Fallback to English
     if (!voice) {
-      voice = this.voices.find(v => v.lang.includes('en'));
+      voice = list.find(v => v.lang.includes('en'));
     }
-    
-    return voice || this.voices[0];
+
+    return voice || list[0] || null;
   }
 
   /**

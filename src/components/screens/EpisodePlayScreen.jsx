@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import useGameStore from "../../store/useGameStore";
 import {
   submitProgress,
@@ -9,6 +9,8 @@ import {
   roleBadgeForScene,
   progressLabelForScene,
   environmentForScene,
+  stageLabelForScene,
+  avatarForSpeaker,
 } from "../../services/episodeMeta";
 import ttsService from "../../services/ttsService";
 import VoiceWaveform from "../ui/VoiceWaveform";
@@ -23,19 +25,10 @@ import VoiceWaveform from "../ui/VoiceWaveform";
  */
 const OPTIONS_DISPLAY_MODE = "after_audio";
 
-const SPEAKER_AVATAR = {
-  Narator: "🎙️",
-  "Kiai Ahmad Dahlan": "👳",
-  Sudja: "🧑",
-  "Nyai Haji Ahmad Dahlan": "👩",
-  Ulama: "🧔",
-  Kiai: "👳",
-};
-
 const SLOW_SCENES = new Set(["decision", "transfer"]);
 
-function speakerAvatar(speaker) {
-  return SPEAKER_AVATAR[speaker] || "🧑";
+function stripMarker(t) {
+  return (t || "").replace(/^\s*Narator\s*:\s*/, "");
 }
 
 /**
@@ -74,6 +67,8 @@ export default function EpisodePlayScreen() {
   const [showContent, setShowContent] = useState(OPTIONS_DISPLAY_MODE === "instant");
   const [isPlaying, setIsPlaying] = useState(false);
   const [lastAnswered, setLastAnswered] = useState(null); // { choiceId, feedback }
+  const [flavorAck, setFlavorAck] = useState(null); // tanggapan scene dialog ber-opsi (S2, tanpa skor)
+  const audioStartedRef = useRef(false);
 
   const accent = EPISODE_META[epId]?.accent || "#4CAF50";
 
@@ -81,6 +76,7 @@ export default function EpisodePlayScreen() {
   useEffect(() => {
     setShowContent(OPTIONS_DISPLAY_MODE === "instant");
     setLastAnswered(null);
+    setFlavorAck(null);
   }, [sceneNo, episodeSub]);
 
   // Teks yang dibacakan untuk scene aktif
@@ -90,18 +86,26 @@ export default function EpisodePlayScreen() {
     }
     if (!scene) return "";
     switch (scene.type) {
-      case "decision":
-      case "consequence":
       case "opening":
       case "refleksi_kiai":
       case "penutup":
         return scene.text;
+      case "decision":
+        return scene.text;
       case "dialog":
+        // Scene dialog ber-opsi (S2): setelah memilih, yang dibacakan = tanggapan.
+        if (scene.options?.length && flavorAck) return flavorAck;
         return scene.text;
+      case "consequence": {
+        // Suara harus sama dengan yang ditampilkan: feedback spesifik pilihanmu.
+        const fb = scene.feedback?.[episodeChoices[String(decisionScene?.no)]?.choiceId];
+        return fb || scene.text;
+      }
       case "refleksi_diri": {
-        const q = scene.questions?.[episodeSub];
-        if (q) return q;
-        return scene.text;
+        // Sub 0 = intro narator (dibacakan), sisanya = pertanyaan ke-(sub).
+        if (episodeSub === 0) return scene.text;
+        const q = scene.questions?.[episodeSub - 1];
+        return q || scene.text;
       }
       case "transfer": {
         if (lastAnswered) return lastAnswered.feedback;
@@ -112,21 +116,23 @@ export default function EpisodePlayScreen() {
       default:
         return scene.text || "";
     }
-  }, [sceneNo, scene, episodeSub, lastAnswered, epId]);
+  }, [sceneNo, scene, episodeSub, lastAnswered, epId, flavorAck]);
 
   const isSlowScene =
-    sceneNo > 0 && SLOW_SCENES.has(scene.type);
+    sceneNo > 0 && scene && SLOW_SCENES.has(scene.type);
 
   // Auto-play audio (TTS) saat scene/text berubah
   useEffect(() => {
     ttsService.stop();
     setShowContent(OPTIONS_DISPLAY_MODE === "instant");
+    audioStartedRef.current = false;
     const timer = setTimeout(() => {
       ttsService.play({
         ttsConfig,
         audio: null,
         speechText,
         onStart: () => {
+          audioStartedRef.current = true;
           setIsPlaying(true);
           setIsSpeaking(true);
         },
@@ -144,8 +150,18 @@ export default function EpisodePlayScreen() {
         },
       });
     }, 250);
+    // Jaring pengaman: kalau audio tidak pernah mulai, jangan menggantung di
+    // "Berbicara..." — tampilkan konten supaya alur selalu lanjut.
+    const watchdog = setTimeout(() => {
+      if (!audioStartedRef.current) {
+        setIsPlaying(false);
+        setIsSpeaking(false);
+        setShowContent(true);
+      }
+    }, 4000);
     return () => {
       clearTimeout(timer);
+      clearTimeout(watchdog);
       ttsService.stop();
       setIsSpeaking(false);
     };
@@ -207,6 +223,15 @@ export default function EpisodePlayScreen() {
     recordEpisodeChoice(String(scene.no), option.id, score);
     submitProgress({ episodeId: epId, sceneNo: scene.no, choiceId: option.id, score });
     goNextScene();
+  };
+
+  // S2 (dialog ber-opsi, tanpa skor): pilih rasa/respons → bacakan tanggapan lalu lanjut.
+  const handleFlavorPick = (option) => {
+    ttsService.stop();
+    setIsPlaying(false);
+    setIsSpeaking(false);
+    setShowContent(true);
+    setFlavorAck(option.feedback || scene.text);
   };
 
   // Transfer item: pilih opsi → catat + kirim → tampilkan feedback inline
@@ -278,6 +303,7 @@ export default function EpisodePlayScreen() {
           label="Saya siap — masuk ▸"
           onClick={() => goNextScene()}
           color={accent}
+          pulse={!isPlaying}
         />
       </Shell>
     );
@@ -308,19 +334,58 @@ export default function EpisodePlayScreen() {
             text={scene.text}
             style={{ background: "#1a1a3ecc" }}
           />
-          <ActionButton label="Lanjut ▸" onClick={() => goNextScene()} color="#4CAF50" />
+          <ActionButton
+            label="Lanjut ▸"
+            onClick={() => goNextScene()}
+            color="#4CAF50"
+            pulse={!isPlaying}
+          />
         </>
       )}
 
       {scene.type === "dialog" && (
         <>
-          <Bubble
-            avatar={speakerAvatar(scene.speaker)}
-            title={scene.speaker}
-            text={scene.text}
-            style={{ background: `${accent}cc` }}
-          />
-          <ActionButton label="Lanjut ▸" onClick={() => goNextScene()} color="#4CAF50" />
+          {!flavorAck ? (
+            <>
+              <Bubble
+                avatar={avatarForSpeaker(scene.speaker)}
+                title={scene.speaker}
+                text={scene.text}
+                style={{ background: `${accent}cc` }}
+              />
+              {!scene.options?.length ? (
+                <ActionButton
+                  label="Lanjut ▸"
+                  onClick={() => goNextScene()}
+                  color="#4CAF50"
+                  pulse={!isPlaying}
+                />
+              ) : !showContent ? (
+                <WaitingHint onSkip={handleSkipAudio} />
+              ) : (
+                <OptionsList
+                  options={scene.options}
+                  color={accent}
+                  onSelect={handleFlavorPick}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              <Bubble
+                avatar={avatarForSpeaker(scene.speaker)}
+                title={scene.speaker}
+                text={flavorAck}
+                style={{ background: `${accent}cc` }}
+              />
+              <ActionButton
+                label="Lanjut ▸"
+                onClick={() => goNextScene()}
+                color="#4CAF50"
+                pulse={!isPlaying}
+              />
+            </>
+          )}
         </>
       )}
 
@@ -356,6 +421,7 @@ export default function EpisodePlayScreen() {
             label="Renungkan ▸"
             onClick={() => goNextScene()}
             color={accent}
+            pulse={!isPlaying}
           />
         </>
       )}
@@ -368,7 +434,12 @@ export default function EpisodePlayScreen() {
             text={scene.text}
             style={{ background: `${accent}cc` }}
           />
-          <ActionButton label="Lanjut merenung ▸" onClick={() => goNextScene()} color={accent} />
+          <ActionButton
+            label="Lanjut merenung ▸"
+            onClick={() => goNextScene()}
+            color={accent}
+            pulse={!isPlaying}
+          />
         </>
       )}
 
@@ -378,7 +449,7 @@ export default function EpisodePlayScreen() {
             <Bubble
               avatar="🎙️"
               title="Refleksi Diri"
-              text={scene.text}
+              text={stripMarker(scene.text)}
               style={{ background: "#1a1a3ecc" }}
             />
           )}
@@ -391,11 +462,36 @@ export default function EpisodePlayScreen() {
             />
           )}
           {episodeSub === 0 ? (
-            <ActionButton label="Merenung ▸" onClick={() => setEpisodeSub(1)} color={accent} />
+            <ActionButton
+              label="Merenung ▸"
+              onClick={() => setEpisodeSub(1)}
+              color={accent}
+              pulse={!isPlaying}
+            />
+          ) : scene.answerOptions?.[episodeSub - 1]?.options ? (
+            !showContent ? (
+              <WaitingHint onSkip={handleSkipAudio} />
+            ) : (
+              <OptionsList
+                options={scene.answerOptions[episodeSub - 1].options}
+                color={accent}
+                onSelect={() => handleRefleksiNext()}
+              />
+            )
           ) : episodeSub < scene.questions.length ? (
-            <ActionButton label="Lanjut ▸" onClick={handleRefleksiNext} color={accent} />
+            <ActionButton
+              label="Lanjut ▸"
+              onClick={handleRefleksiNext}
+              color={accent}
+              pulse={!isPlaying}
+            />
           ) : (
-            <ActionButton label="✓ Selesai merenung" onClick={handleRefleksiNext} color={accent} />
+            <ActionButton
+              label="✓ Selesai merenung"
+              onClick={handleRefleksiNext}
+              color={accent}
+              pulse={!isPlaying}
+            />
           )}
         </>
       )}
@@ -446,12 +542,17 @@ export default function EpisodePlayScreen() {
           <Bubble
             avatar="👳"
             title="Kata Kiai"
-            text={scene.text}
+            text={stripMarker(scene.text)}
             style={{ background: `${accent}cc` }}
           />
           <QuoteCard quote={scene.quote} accent={accent} />
           <div style={{ marginTop: "14px" }}>
-            <ActionButton label="✓ Selesai" onClick={handleFinish} color={accent} />
+            <ActionButton
+              label="✓ Selesai"
+              onClick={handleFinish}
+              color={accent}
+              pulse={!isPlaying}
+            />
           </div>
         </>
       )}
@@ -461,10 +562,12 @@ export default function EpisodePlayScreen() {
 
 /* ================== Sub-components 2D ================== */
 
-function Shell({ epId, sceneNo, accent, isPlaying, onToggleAudio, onSkip, onBack, onExit, children }) {
+function Shell({ epId, sceneNo, accent, audioData, isPlaying, onToggleAudio, onSkip, onBack, onExit, children }) {
   const meta = EPISODE_META[epId];
   const isVerboseScene = sceneNo > 0;
   const showAudioControls = isVerboseScene || sceneNo === 0;
+  const progressLabel =
+    sceneNo === 0 ? progressLabelForScene(sceneNo) : `${stageLabelForScene(sceneNo)} · ${progressLabelForScene(sceneNo)}`;
 
   return (
     <div style={styles.container}>
@@ -479,7 +582,7 @@ function Shell({ epId, sceneNo, accent, isPlaying, onToggleAudio, onSkip, onBack
           <span style={{ ...styles.epChip, color: accent, borderColor: `${accent}88`, background: `${accent}18` }}>
             {meta?.label || "Episode"}
           </span>
-          <span style={styles.progressChip}>{progressLabelForScene(sceneNo)}</span>
+          <span style={styles.progressChip}>{progressLabel}</span>
         </div>
         <div style={styles.headerRight}>
           <button style={styles.backButton} onClick={onExit}>✕ Keluar</button>
@@ -495,7 +598,9 @@ function Shell({ epId, sceneNo, accent, isPlaying, onToggleAudio, onSkip, onBack
         {/* Audio controls */}
         {showAudioControls && (
           <div style={styles.audioRow}>
-            {isPlaying && <VoiceWaveform audioData={new Uint8Array(32)} isActive color={accent} />}
+            <div style={styles.waveArea}>
+              {isPlaying && <VoiceWaveform audioData={audioData} isActive color={accent} />}
+            </div>
             <div style={styles.audioButtons}>
               {isPlaying ? null : (
                 <button style={styles.audioMini} onClick={onToggleAudio}>
@@ -527,10 +632,11 @@ function Bubble({ avatar, title, text, style, compact }) {
   );
 }
 
-function ActionButton({ label, onClick, color }) {
+function ActionButton({ label, onClick, color, pulse }) {
   return (
     <button
       style={{ ...styles.actionButton, background: color }}
+      className={pulse ? "ui-pulse" : undefined}
       onClick={onClick}
     >
       {label}
@@ -562,7 +668,9 @@ function OptionsList({ options, color, onSelect }) {
 function WaitingHint({ onSkip }) {
   return (
     <div style={styles.waitingHint}>
-      <VoiceWaveform audioData={new Uint8Array(32)} isActive color="#4CAF50" />
+      <p style={styles.waitingText}>
+        Audio sedang diputar… opsi akan muncul setelahnya.
+      </p>
       <button style={styles.skipButton} onClick={onSkip}>
         ⏭️ Lewati audio
       </button>
@@ -654,9 +762,19 @@ const styles = {
   audioRow: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "flex-end",
     gap: "8px",
     marginBottom: "8px",
+  },
+  waveArea: {
+    flex: 1,
+    minWidth: 0,
+    display: "flex",
+    justifyContent: "flex-end",
+  },
+  audioButtons: {
+    display: "flex",
+    gap: "8px",
+    flexShrink: 0,
   },
   audioMini: {
     padding: "6px 12px",
@@ -747,6 +865,11 @@ const styles = {
     alignItems: "center",
     gap: "12px",
     padding: "14px",
+  },
+  waitingText: {
+    margin: 0,
+    fontSize: "13px",
+    color: "rgba(255,255,255,0.75)",
   },
   skipButton: {
     padding: "10px 22px",

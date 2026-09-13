@@ -84,3 +84,15 @@ body > button,
   .lamp-breathe { animation: none !important; }
   .fade-in, .pulse { animation-duration: 0.01s; }
 }
+
+/* Denyut halus tombol lanjut — sinyal "audio selesai, silakan lanjut" */
+@keyframes uiPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
+  50% { transform: scale(1.03); box-shadow: 0 6px 26px rgba(0,0,0,0.5); }
+}
+.ui-pulse {
+  animation: uiPulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-pulse { animation: none !important; }
+}

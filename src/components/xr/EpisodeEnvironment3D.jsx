@@ -750,7 +750,7 @@ function LanggarSoreScene({ cfg }) {
       <Cyl position={[-5.6, 0.9, -4.4]} args={[0.07, 0.09, 1.5, 6]} color={DARK} />
       {/* Sajadah di serambi */}
       <Box position={[-5.4, 0.16, -4.4]} args={[0.42, 0.03, 0.5]} color="#c9a67a" />
-      /* Pohon rindang */}
+      {/* Pohon rindang */}
       <Tree position={[2.6, 0, -3.6]} scale={1.35} />
       <Tree position={[0.6, 0, -5.9]} scale={0.95} />
       <PalmTree position={[-1.2, 0, -7.6]} scale={0.9} />

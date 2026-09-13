@@ -72,3 +72,36 @@ export function progressLabelForScene(sceneNo) {
   if (sceneNo === 0) return "Peranmu / 10";
   return `Adegan ${sceneNo} / 10`;
 }
+
+/** Label "babak" per scene — memperjelas peran adegan dalam sesi konseling. */
+export function stageLabelForScene(sceneNo) {
+  if (sceneNo === 0) return "Peranmu";
+  const map = {
+    1: "Pembuka",
+    2: "Cerita",
+    3: "Cerita",
+    4: "Cerita",
+    5: "Giliranmu",
+    6: "Tanggapan Kiai",
+    7: "Renungan Kiai",
+    8: "Refleksi Diri",
+    9: "Situasimu",
+    10: "Penutup",
+  };
+  return map[sceneNo] || `Adegan ${sceneNo}`;
+}
+
+/** Identitas pembicara — dipakai 2D & 3D supaya "siapa yang bicara" konsisten. */
+export const SPEAKER_AVATAR = {
+  Narator: "🎙️",
+  "Kiai Ahmad Dahlan": "👳",
+  "KH Ahmad Dahlan": "👳",
+  Sudja: "🧑",
+  "Nyai Haji Ahmad Dahlan": "👩",
+  Ulama: "🧔",
+  Kiai: "👳",
+};
+
+export function avatarForSpeaker(speaker) {
+  return SPEAKER_AVATAR[speaker] || "🧑";
+}

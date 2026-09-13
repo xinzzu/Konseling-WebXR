@@ -91,6 +91,10 @@ export default function StartScreen() {
             🧪 Mode Mockup — demo tanpa backend
           </button>
           <p className="sg-mock-hint">Topik, masalah &amp; cerita sudah tersedia</p>
+          <button className="sg-mock-link sg-dash-link" onClick={() => { window.location.hash = "#/riset"; }}>
+            📊 Dashboard Peneliti
+          </button>
+          <p className="sg-mock-hint">Login JWT untuk memantau riwayat jawaban siswa</p>
         </div>
       </div>
 
@@ -385,6 +389,10 @@ const gateCSS = `
     margin: 6px 0 0;
     font-size: 11px;
     color: rgba(246,234,212,0.42);
+  }
+  .sg-dash-link {
+    margin-top: 14px;
+    display: inline-block;
   }
 
   @keyframes sgDrop {

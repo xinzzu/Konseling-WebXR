@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Text, RoundedBox } from "@react-three/drei";
 import Panel3D from "./Panel3D";
 import Button3D from "./Button3D";
@@ -12,12 +12,16 @@ import {
   EPISODE_META,
   roleBadgeForScene,
   progressLabelForScene,
+  stageLabelForScene,
+  avatarForSpeaker,
 } from "../../services/episodeMeta";
 import ttsService from "../../services/ttsService";
 import { useAudioOwner } from "../../hooks/useAudioOwner";
 import KiaiSpeaker3D from "./KiaiSpeaker3D";
 
 const SLOW_SCENES = new Set(["decision", "transfer"]);
+
+const stripMarker = (t) => (t || "").replace(/^\s*Narator\s*:\s*/, "");
 
 /**
  * EpisodePlay3D - Alur episode dalam VR (REAL APP).
@@ -51,15 +55,30 @@ export default function EpisodePlay3D() {
   const [showContent, setShowContent] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [lastAnswered, setLastAnswered] = useState(null);
+  const [flavorAck, setFlavorAck] = useState(null); // tanggapan dialog ber-opsi (S2, tanpa skor)
+  const startedRef = useRef(false);
 
   const accent = EPISODE_META[epId]?.accent || "#4CAF50";
 
   const speechText = useMemo(() => {
     if (sceneIndex === 0) return EPISODE_META[epId]?.roleCard || "";
     if (!scene) return "";
+    if (scene.type === "dialog") {
+      // Dialog ber-opsi (S2): setelah memilih, yang dibacakan = tanggapan.
+      if (scene.options?.length && flavorAck) return flavorAck;
+      return scene.text;
+    }
     if (scene.type === "refleksi_diri") {
-      const q = scene.questions?.[episodeSub];
+      // Sub 0 = intro narator, sisanya = pertanyaan ke-(sub).
+      if (episodeSub === 0) return scene.text;
+      const q = scene.questions?.[episodeSub - 1];
       return q || scene.text;
+    }
+    if (scene.type === "consequence") {
+      // Suara harus sama dengan yang ditampilkan: feedback spesifik pilihanmu.
+      const fb =
+        scene.feedback?.[episodeChoices[String(decisionScene?.no)]?.choiceId];
+      return fb || scene.text;
     }
     if (scene.type === "transfer") {
       if (lastAnswered) return lastAnswered.feedback;
@@ -67,7 +86,7 @@ export default function EpisodePlay3D() {
       return item ? item.situation : scene.text;
     }
     return scene.text || "";
-  }, [sceneIndex, scene, episodeSub, lastAnswered, epId]);
+  }, [sceneIndex, scene, episodeSub, lastAnswered, epId, episodeChoices, decisionScene, flavorAck]);
 
   useEffect(() => {
     // 3D hanya pemilik audio saat VR. Di mode 2D jangan sentuh ttsService
@@ -76,12 +95,15 @@ export default function EpisodePlay3D() {
     ttsService.stop();
     setShowContent(false);
     setLastAnswered(null);
+    setFlavorAck(null);
+    startedRef.current = false;
     const timer = setTimeout(() => {
       ttsService.play({
         ttsConfig,
         audio: null,
         speechText,
         onStart: () => {
+          startedRef.current = true;
           setIsPlaying(true);
           setIsSpeaking(true);
         },
@@ -97,8 +119,19 @@ export default function EpisodePlay3D() {
         },
       });
     }, 250);
+    // Jaring pengaman: kalau audio tidak kunjung mulai (mis. Web Speech/XA
+    // diblokir di sesi immersive, atau autoplay gagal diam-diam), jangan biarkan
+    // layar menggantung — tampilkan opsi/isi supaya alur selalu lanjut.
+    const watchdog = setTimeout(() => {
+      if (!startedRef.current) {
+        setIsPlaying(false);
+        setIsSpeaking(false);
+        setShowContent(true);
+      }
+    }, 4000);
     return () => {
       clearTimeout(timer);
+      clearTimeout(watchdog);
       ttsService.stop();
       setIsSpeaking(false);
     };
@@ -119,6 +152,12 @@ export default function EpisodePlay3D() {
     recordEpisodeChoice(String(scene.no), option.id, score);
     submitProgress({ episodeId: epId, sceneNo: scene.no, choiceId: option.id, score });
     goNextScene();
+  };
+
+  // S2 (dialog ber-opsi, tanpa skor): pilih rasa/respons → bacakan tanggapan lalu lanjut.
+  const handleFlavorPick = (option) => {
+    setShowContent(true);
+    setFlavorAck(option.feedback || scene.text);
   };
 
   const handleTransferItem = (itemIdx, option) => {
@@ -173,8 +212,13 @@ export default function EpisodePlay3D() {
         <Text position={[0, 0.95, 0.03]} fontSize={0.05} color="white" anchorX="center" anchorY="middle">
           {label}
         </Text>
-        <Text position={[0, 0.86, 0.03]} fontSize={0.028} color={accent} anchorX="center" anchorY="middle">
-          {progressLabelForScene(sceneIndex)} · {roleBadgeForScene(sceneIndex)}
+        <Text position={[0, 0.86, 0.03]} fontSize={0.026} color="white" anchorX="center" anchorY="middle">
+          {roleBadgeForScene(sceneIndex)}
+        </Text>
+        <Text position={[0, 0.78, 0.03]} fontSize={0.026} color={accent} anchorX="center" anchorY="middle">
+          {sceneIndex === 0
+            ? progressLabelForScene(sceneIndex)
+            : `${stageLabelForScene(sceneIndex)} · ${progressLabelForScene(sceneIndex)}`}
         </Text>
 
         {/* ===== KARTU PERAN (sceneIndex 0) ===== */}
@@ -199,6 +243,7 @@ export default function EpisodePlay3D() {
               hoverColor={accent}
               text="Saya siap — masuk"
               textSize={0.04}
+              pulse={!isPlaying}
               onClick={() => goNextScene()}
             />
           </>
@@ -209,7 +254,12 @@ export default function EpisodePlay3D() {
             {/* Body text */}
             {scene.type === "opening" && (
               <>
-                <BodyText title="Narator" text={`${scene.text}\n\n— Narator`} accent={accent} yTop={0.72} />
+                <BodyText
+                  title={`🎙️ Narator`}
+                  text={scene.text}
+                  accent={accent}
+                  yTop={0.72}
+                />
                 <Button3D
                   position={[0, -0.78, 0.05]}
                   size={[1.2, 0.12, 0.03]}
@@ -217,6 +267,7 @@ export default function EpisodePlay3D() {
                   hoverColor="#66BB6A"
                   text="Lanjut ▸"
                   textSize={0.04}
+                  pulse={!isPlaying}
                   onClick={() => goNextScene()}
                 />
               </>
@@ -224,22 +275,62 @@ export default function EpisodePlay3D() {
 
             {scene.type === "dialog" && (
               <>
-                <BodyText title={scene.speaker} text={scene.text} accent={accent} yTop={0.72} />
-                <Button3D
-                  position={[0, -0.78, 0.05]}
-                  size={[1.2, 0.12, 0.03]}
-                  color="#4CAF50"
-                  hoverColor="#66BB6A"
-                  text="Lanjut ▸"
-                  textSize={0.04}
-                  onClick={() => goNextScene()}
-                />
+                {!flavorAck ? (
+                  <>
+                    <BodyText
+                      title={`${avatarForSpeaker(scene.speaker)} ${scene.speaker}`}
+                      text={scene.text}
+                      accent={accent}
+                      yTop={0.72}
+                    />
+                    {!scene.options?.length ? (
+                      <Button3D
+                        position={[0, -0.78, 0.05]}
+                        size={[1.2, 0.12, 0.03]}
+                        color="#4CAF50"
+                        hoverColor="#66BB6A"
+                        text="Lanjut ▸"
+                        textSize={0.04}
+                        pulse={!isPlaying}
+                        onClick={() => goNextScene()}
+                      />
+                    ) : !showContent ? (
+                      <WaitingState onSkip={handleSkip} isPlaying={isPlaying} accent={accent} />
+                    ) : (
+                      <OptionRows
+                        options={scene.options}
+                        color={accent}
+                        yStart={0.38}
+                        onSelect={handleFlavorPick}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <BodyText
+                      title={`${avatarForSpeaker(scene.speaker)} ${scene.speaker}`}
+                      text={flavorAck}
+                      accent={accent}
+                      yTop={0.72}
+                    />
+                    <Button3D
+                      position={[0, -0.78, 0.05]}
+                      size={[1.2, 0.12, 0.03]}
+                      color="#4CAF50"
+                      hoverColor="#66BB6A"
+                      text="Lanjut ▸"
+                      textSize={0.04}
+                      pulse={!isPlaying}
+                      onClick={() => goNextScene()}
+                    />
+                  </>
+                )}
               </>
             )}
 
             {scene.type === "decision" && (
               <>
-                <BodyText title="Kini giliranmu bertindak" text={scene.text} accent={accent} yTop={0.72} />
+                <BodyText title="🎙️ Kini giliranmu bertindak" text={scene.text} accent={accent} yTop={0.72} />
                 {!showContent ? (
                   <WaitingState onSkip={handleSkip} isPlaying={isPlaying} accent={accent} />
                 ) : (
@@ -251,7 +342,7 @@ export default function EpisodePlay3D() {
             {scene.type === "consequence" && (
               <>
                 <BodyText
-                  title="Tanggapan Kiai"
+                  title="👳 Tanggapan Kiai"
                   text={currentConsequenceFeedback || scene.text}
                   accent={accent}
                   yTop={0.72}
@@ -263,6 +354,7 @@ export default function EpisodePlay3D() {
                   hoverColor={accent}
                   text="Renungkan ▸"
                   textSize={0.04}
+                  pulse={!isPlaying}
                   onClick={() => goNextScene()}
                 />
               </>
@@ -270,7 +362,7 @@ export default function EpisodePlay3D() {
 
             {scene.type === "refleksi_kiai" && (
               <>
-                <BodyText title="Renungan Kiai" text={scene.text} accent={accent} yTop={0.72} />
+                <BodyText title="👳 Renungan Kiai" text={scene.text} accent={accent} yTop={0.72} />
                 <Button3D
                   position={[0, -0.78, 0.05]}
                   size={[1.3, 0.12, 0.03]}
@@ -278,6 +370,7 @@ export default function EpisodePlay3D() {
                   hoverColor={accent}
                   text="Lanjut merenung ▸"
                   textSize={0.04}
+                  pulse={!isPlaying}
                   onClick={() => goNextScene()}
                 />
               </>
@@ -288,12 +381,12 @@ export default function EpisodePlay3D() {
                 <BodyText
                   title={
                     episodeSub === 0
-                      ? "Refleksi Diri"
-                      : `Pertanyaan ${episodeSub}/${scene.questions.length}`
+                      ? "🎙️ Refleksi Diri"
+                      : `💭 Pertanyaan ${episodeSub}/${scene.questions.length}`
                   }
                   text={
                     episodeSub === 0
-                      ? scene.text
+                      ? stripMarker(scene.text)
                       : scene.questions[episodeSub - 1]
                   }
                   accent={accent}
@@ -307,8 +400,20 @@ export default function EpisodePlay3D() {
                     hoverColor={accent}
                     text="Merenung ▸"
                     textSize={0.04}
+                    pulse={!isPlaying}
                     onClick={() => setEpisodeSub(1)}
                   />
+                ) : scene.answerOptions?.[episodeSub - 1]?.options ? (
+                  !showContent ? (
+                    <WaitingState onSkip={handleSkip} isPlaying={isPlaying} accent={accent} />
+                  ) : (
+                    <OptionRows
+                      options={scene.answerOptions[episodeSub - 1].options}
+                      color={accent}
+                      yStart={0.30}
+                      onSelect={handleRefleksiNext}
+                    />
+                  )
                 ) : episodeSub < scene.questions.length ? (
                   <Button3D
                     position={[0, -0.78, 0.05]}
@@ -317,6 +422,7 @@ export default function EpisodePlay3D() {
                     hoverColor={accent}
                     text="Lanjut ▸"
                     textSize={0.04}
+                    pulse={!isPlaying}
                     onClick={handleRefleksiNext}
                   />
                 ) : (
@@ -327,6 +433,7 @@ export default function EpisodePlay3D() {
                     hoverColor={accent}
                     text="✓ Selesai merenung"
                     textSize={0.04}
+                    pulse={!isPlaying}
                     onClick={handleRefleksiNext}
                   />
                 )}
@@ -336,7 +443,7 @@ export default function EpisodePlay3D() {
             {scene.type === "transfer" && (
               <>
                 <BodyText
-                  title={`Situasi ${Math.min(episodeSub + 1, scene.items.length)}/${scene.items.length}`}
+                  title={`🎒 Situasi ${Math.min(episodeSub + 1, scene.items.length)}/${scene.items.length}`}
                   text={
                     lastAnswered
                       ? "Umpan balik — cerminan sikap, bukan benar-salah."
@@ -377,7 +484,7 @@ export default function EpisodePlay3D() {
 
             {scene.type === "penutup" && (
               <>
-                <BodyText title="Kata Kiai" text={scene.text} accent={accent} yTop={0.72} />
+                <BodyText title="👳 Kata Kiai" text={stripMarker(scene.text)} accent={accent} yTop={0.72} />
                 <Text
                   position={[0, -0.45, 0.04]}
                   fontSize={0.028}
@@ -398,6 +505,7 @@ export default function EpisodePlay3D() {
                   hoverColor={accent}
                   text="✓ Selesai"
                   textSize={0.04}
+                  pulse={!isPlaying}
                   onClick={() => {
                     submitProgress({ episodeId: epId, sceneNo: 10, choiceId: "complete" });
                     ttsService.stop();
