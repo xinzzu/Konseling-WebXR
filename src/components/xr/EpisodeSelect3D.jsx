@@ -102,7 +102,7 @@ export default function EpisodeSelect3D() {
         })}
 
         <Button3D
-          position={[-1.05, 0.95, 0.04]}
+          position={[-0.92, 0.95, 0.04]}
           size={[0.5, 0.1, 0.03]}
           color="#333"
           hoverColor="#555"

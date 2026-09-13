@@ -4,6 +4,8 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import soundService from "../../services/soundService";
 
+const GLOW_COLOR = new THREE.Color("#b9e9ff");
+
 /**
  * Button3D - Tombol 3D yang bisa diklik dengan controller, pointer, atau hand tracking
  * Support: mouse click, controller trigger, hand pinch gesture
@@ -23,20 +25,45 @@ export default function Button3D({
 }) {
   const meshRef = useRef();
   const groupRef = useRef();
+  const boxRef = useRef();
   const [hovered, setHovered] = useState(false);
   const [pressed, setPressed] = useState(false);
 
-  // Animation
+  // Lebar teks kira-kira (glyph rata-rata ≈ 0.55 × fontSize) → auto-shrink
+  // supaya label panjang tidak keluar dari tombol/panel (terpotong).
+  const label = text == null ? "" : String(text);
+  const textMaxWidth = size[0] * 0.92;
+  let fittedTextSize = textSize;
+  if (label.length * 0.55 * textSize > textMaxWidth) {
+    fittedTextSize = Math.max(textSize * 0.6, textMaxWidth / (label.length * 0.55));
+  }
+
+  // Animation: denyut "siap dilanjut" via glow (emissive), BUKAN scale —
+  // supaya tulisan di tombol tidak mengecil/membesar saat berdenyut.
   useFrame(({ clock }) => {
     if (!meshRef.current) return;
 
     const t = clock?.elapsedTime ?? 0;
-    const pulseScale = 1 + Math.sin(t * 3) * 0.045;
-    const targetScale = pressed ? 0.95 : hovered ? 1.08 : pulse ? pulseScale : 1;
+    const targetScale = pressed ? 0.96 : hovered ? 1.06 : 1;
     meshRef.current.scale.lerp(
-      new THREE.Vector3(targetScale, targetScale, targetScale), 
+      new THREE.Vector3(targetScale, targetScale, targetScale),
       0.2
     );
+
+    const mat = boxRef.current?.material;
+    if (mat && !Array.isArray(mat)) {
+      const glow =
+        pressed
+          ? 0.3
+          : hovered
+            ? 0.18
+            : pulse
+              ? 0.12 + Math.sin(t * 2.5) * 0.08
+              : 0;
+      if (mat.emissiveIntensity === 1) mat.emissiveIntensity = 0; // default material
+      mat.emissiveIntensity = THREE.MathUtils.lerp(mat.emissiveIntensity || 0, glow, 0.15);
+      mat.emissive.lerp(GLOW_COLOR, 0.08);
+    }
   });
 
   // Handle click - unified untuk semua input methods
@@ -99,6 +126,7 @@ export default function Button3D({
     <group position={position} ref={groupRef}>
       <group ref={meshRef}>
         <RoundedBox
+          ref={boxRef}
           args={size}
           radius={0.02}
           smoothness={4}
@@ -124,10 +152,12 @@ export default function Button3D({
         </RoundedBox>
         <Text
           position={[0, 0, size[2] / 2 + 0.005]}
-          fontSize={textSize}
+          fontSize={fittedTextSize}
           color="white"
           anchorX="center"
           anchorY="middle"
+          maxWidth={textMaxWidth}
+          textAlign="center"
         >
           {text}
         </Text>

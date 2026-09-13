@@ -50,6 +50,10 @@ class TTSService {
     this.stop();
     const gen = this.gen;
 
+    // Jejak dev: perlihatkan teks yang benar-benar dibacakan di console,
+    // supaya tiap laporan "suara beda dari tulisan" bisa langsung dicek.
+    console.info(`[TTS ${mode}]`, String(speechText || "").slice(0, 90));
+
     switch (mode) {
       case 'edge':
         return this.playEdge({ text: speechText, onStart, onEnd, onError, gen });

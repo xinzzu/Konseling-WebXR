@@ -3,13 +3,13 @@ import useGameStore from "../../store/useGameStore";
 import { EPISODE_META } from "../../services/episodeMeta";
 import backgroundMusic from "../../services/backgroundMusic";
 import ttsService from "../../services/ttsService";
+import VoiceWaveform from "../ui/VoiceWaveform";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3100";
 
 const LOCAL_FALLBACK =
   "Anakku, terima kasih sudah menyelesaikan pelajaran ini dengan sungguh-sungguh. Ambillah satu kebaikan dari pelajaran tadi dan bawa ia ke sekolahmu dengan hati yang lapang. Pelan-pelan saja — Kiai selalu mendoakan yang terbaik untukmu.";
 
-/** Rangkum pilihan siswa jadi konteks untuk "pesan pribadi dari Kiai". */
 function buildKiaiSummary(episode, choices) {
   const scenes = episode?.scenes || [];
   let decisionLabel = null;
@@ -21,8 +21,8 @@ function buildKiaiSummary(episode, choices) {
     if (scene.type === "decision") {
       decisionLabel = scene.options?.find((o) => o.id === record.choiceId)?.label || null;
     } else if (scene.type === "transfer") {
-      const item = scene.items?.find((it) => it.no === record.choiceId) ||
-        scene.items?.[record.choiceId];
+      const item =
+        scene.items?.find((it) => it.no === record.choiceId) || scene.items?.[record.choiceId];
       const label = item?.options?.find((o) => o.id === record.choiceId)?.label;
       if (label) transferLabels.push(label);
     }
@@ -32,9 +32,7 @@ function buildKiaiSummary(episode, choices) {
 
 /**
  * EpisodeFinishedScreen - Layar selesai episode (REAL APP).
- * Menawarkan: pesan pribadi dari Kiai (LLM opsional, persona tertune),
- * ulangi episode ini / pilih episode lain / kembali ke menu.
- * Semua jawaban sudah tercatat di backend (POST /api/progress).
+ * Pesan pribadi dari Kiai (LLM opsional), ulangi / pilih episode lain / menu.
  */
 export default function EpisodeFinishedScreen() {
   const [kiaiState, setKiaiState] = useState({ loading: false, reply: null });
@@ -49,8 +47,8 @@ export default function EpisodeFinishedScreen() {
 
   const accent = EPISODE_META[selectedEpisode?.id]?.accent || "#4CAF50";
   const epTitle = selectedEpisode?.tema || "Episode";
+  const quote = selectedEpisode?.scenes?.find((s) => s.type === "penutup")?.quote || "";
 
-  // Hentikan suara saat meninggalkan layar
   useEffect(() => {
     return () => ttsService.stop();
   }, []);
@@ -59,9 +57,13 @@ export default function EpisodeFinishedScreen() {
     if (!text) return;
     ttsService.stop();
     setAudioState("loading");
+    // Suara Kiai selalu via backend (Edge TTS, id-ID-ArdiNeural = pria),
+    // bukan Web Speech yang suka jatuh ke voice perempuan lokal.
+    const kiaiConfig =
+      ttsConfig?.mode === "off" ? ttsConfig : { ...(ttsConfig || {}), mode: "edge" };
     ttsService
       .play({
-        ttsConfig,
+        ttsConfig: kiaiConfig,
         audio: null,
         speechText: text,
         onStart: () => setAudioState("speaking"),
@@ -108,7 +110,6 @@ export default function EpisodeFinishedScreen() {
 
   const handleRepeat = () => {
     ttsService.stop();
-    // Ulangi episode yang sama: set sceneIndex ke 0 (kartu peran) tanpa fetch ulang
     setSelectedEpisode(selectedEpisode);
     setGameState("episode_play");
   };
@@ -130,50 +131,76 @@ export default function EpisodeFinishedScreen() {
   return (
     <div style={styles.container}>
       <div style={styles.content} className="fade-in">
-        <div style={styles.icon}>🌿</div>
-        <h1 style={styles.title}>Episode {epTitle} selesai</h1>
-        <p style={styles.subtitle}>
-          Kamu telah menyelesaikan pelajaran kali ini bersama Kiai Ahmad Dahlan.
-          Jawabanmu sudah dicatat untuk bahan renungan, bukan penilaian benar-salah.
-        </p>
-
-        <div style={{ ...styles.quoteCard, borderTop: `3px solid ${accent}` }}>
-          <div style={styles.quote}>
-            “{selectedEpisode?.scenes?.find((s) => s.type === "penutup")?.quote || ""}”
+        {/* Kepala */}
+        <div style={styles.hero}>
+          <div style={styles.badgeRing}>
+            <div style={styles.badge}><span style={styles.badgeLeaf}>✓</span></div>
           </div>
+          <h1 style={styles.title}>Episode {epTitle} Selesai</h1>
+          <p style={styles.subtitle}>
+            Terima kasih sudah belajar bersama Kiai Ahmad Dahlan.
+            Jawabanmu dicatat sebagai bahan renungan — bukan penilaian benar-salah.
+          </p>
         </div>
 
-        <div style={styles.actions}>
-          {!kiaiState.reply && (
-            <button
-              style={{ ...styles.action, background: "#FF9800" }}
-              onClick={handleKiai}
-              disabled={kiaiState.loading}
-            >
-              {kiaiState.loading ? "⏳ Kiai sedang menyampaikan pesan…" : "🌾 Pesan Pribadi dari Kiai"}
-            </button>
-          )}
-          {kiaiState.reply && (
-            <div style={{ ...styles.kiaiCard, borderLeft: `3px solid ${accent}` }}>
-              <div style={styles.kiaiLabel}>🌾 Pesan dari Kiai Ahmad Dahlan</div>
-              <div style={styles.kiaiReply}>{kiaiState.reply}</div>
-              <button style={styles.audioToggle} onClick={handleToggleAudio}>
-                {audioState === "loading"
-                  ? "⏳ Menyiapkan suara…"
-                  : audioState === "speaking"
-                    ? "⏹ Hentikan Suara"
-                    : "🔊 Putar Suara"}
-              </button>
+        {/* Kartu kutipan */}
+        {quote && (
+          <div style={{ ...styles.quoteCard, borderTopColor: accent }}>
+            <div style={styles.quoteMark}>“</div>
+            <div style={styles.quote}>{quote}</div>
+          </div>
+        )}
+
+        {/* Pesan pribadi dari Kiai */}
+        {!kiaiState.reply && !kiaiState.loading && (
+          <button style={styles.primaryBtn} onClick={handleKiai} disabled={kiaiState.loading}>
+            🌾&nbsp; Pesan Pribadi dari Kiai
+          </button>
+        )}
+        {kiaiState.loading && (
+          <div style={styles.kiaiCard}>
+            <div style={styles.kiaiHeader}>
+              <span style={styles.kiaiAvatar}>👳</span>
+              <span style={styles.kiaiName}>Kiai Ahmad Dahlan</span>
             </div>
-          )}
-          <button style={{ ...styles.action, background: accent }} onClick={handleRepeat}>
-            🔄 Ulangi Episode {epTitle}
+            <div style={styles.kiaiPulse}>⏳ Kiai sedang merangkai kata untukmu…</div>
+          </div>
+        )}
+        {kiaiState.reply && (
+          <div style={styles.kiaiCard}>
+            <div style={styles.kiaiHeader}>
+              <span style={styles.kiaiAvatar}>👳</span>
+              <span style={styles.kiaiName}>Pesan pribadi untukmu</span>
+            </div>
+            <div style={styles.kiaiReply}>{kiaiState.reply}</div>
+            {audioState === "speaking" && (
+              <div style={styles.kiaiWave}>
+                <VoiceWaveform isActive color="#E7C87E" />
+              </div>
+            )}
+            <button
+              style={styles.speakBtn}
+              onClick={handleToggleAudio}
+              disabled={audioState === "loading"}
+            >
+              {audioState === "loading"
+                ? "⏳ Menyiapkan suara…"
+                : audioState === "speaking"
+                  ? "⏹ Hentikan Suara"
+                  : "🔊 Putar Suara Kiai"}
+            </button>
+          </div>
+        )}
+
+        <div style={styles.actions}>
+          <button style={{ ...styles.btn, background: accent }} onClick={handleRepeat}>
+            🔄&nbsp; Ulangi Episode {epTitle}
           </button>
-          <button style={{ ...styles.action, background: "#2196F3" }} onClick={handleOtherEpisode}>
-            📚 Pilih Episode Lain
+          <button style={{ ...styles.btn, background: "#2196F3" }} onClick={handleOtherEpisode}>
+            📚&nbsp; Pilih Episode Lain
           </button>
-          <button style={{ ...styles.action, background: "#555" }} onClick={handleMenu}>
-            🏠 Menu Utama
+          <button style={{ ...styles.btn, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)" }} onClick={handleMenu}>
+            🏠&nbsp; Menu Utama
           </button>
         </div>
       </div>
@@ -188,89 +215,149 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "transparent",
-    zIndex: 100,
     overflow: "auto",
-    padding: "20px",
-    pointerEvents: "none",
+    padding: "24px",
+    paddingBottom: "90px",
+    zIndex: 100,
   },
   content: {
-    maxWidth: "460px",
+    maxWidth: "440px",
     width: "100%",
     textAlign: "center",
-    pointerEvents: "auto",
   },
-  icon: { fontSize: "48px", marginBottom: "8px" },
+  hero: { marginBottom: "20px" },
+  badgeRing: {
+    width: "78px",
+    height: "78px",
+    margin: "0 auto 14px",
+    borderRadius: "50%",
+    background: "radial-gradient(circle, rgba(76,201,160,0.25) 0%, transparent 70%)",
+    border: "1px solid rgba(76,201,160,0.35)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 12px 40px rgba(76,201,160,0.25)",
+  },
+  badge: {
+    width: "56px",
+    height: "56px",
+    borderRadius: "50%",
+    background: "linear-gradient(160deg, #37906f, #1f5c45)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeLeaf: { color: "#eafff4", fontSize: "26px", fontWeight: 800 },
   title: {
     fontSize: "26px",
-    fontWeight: "700",
-    color: "white",
-    margin: "0 0 10px 0",
+    fontWeight: 800,
+    color: "#f4f8fb",
+    letterSpacing: "-0.01em",
+    margin: 0,
   },
   subtitle: {
-    fontSize: "14px",
-    color: "rgba(255,255,255,0.8)",
-    lineHeight: "1.6",
-    margin: "0 0 20px 0",
+    fontSize: "13.5px",
+    color: "rgba(255,255,255,0.72)",
+    lineHeight: "1.65",
+    margin: "10px auto 0",
+    maxWidth: "360px",
   },
   quoteCard: {
-    background: "rgba(15,15,35,0.88)",
-    borderRadius: "16px",
-    padding: "18px 20px",
-    marginBottom: "20px",
+    background: "rgba(15,20,32,0.82)",
+    borderTop: "3px solid #4CAF50",
+    borderRadius: "14px",
+    padding: "16px 18px",
+    marginBottom: "14px",
+    position: "relative",
     backdropFilter: "blur(12px)",
-    boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
+    boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
+  },
+  quoteMark: {
+    position: "absolute",
+    top: "6px",
+    left: "12px",
+    fontSize: "38px",
+    lineHeight: 1,
+    color: "rgba(255,255,255,0.12)",
+    fontFamily: "Georgia, serif",
   },
   quote: {
     fontSize: "15px",
     fontStyle: "italic",
     color: "rgba(255,255,255,0.95)",
-    lineHeight: "1.6",
+    lineHeight: "1.65",
+    paddingLeft: "4px",
   },
-  actions: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-  },
-  action: {
-    padding: "14px 18px",
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "white",
-    border: "none",
-    borderRadius: "16px",
-    cursor: "pointer",
-    boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
-  },
-  kiaiCard: {
-    background: "rgba(20,20,45,0.9)",
-    borderRadius: "16px",
-    padding: "16px 18px",
-    textAlign: "left",
-    boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
-  },
-  kiaiLabel: {
-    fontSize: "12px",
-    fontWeight: "700",
-    color: "#FFC107",
-    marginBottom: "8px",
-  },
-  kiaiReply: {
-    fontSize: "14px",
-    color: "rgba(255,255,255,0.95)",
-    lineHeight: "1.7",
-    whiteSpace: "pre-wrap",
-  },
-  audioToggle: {
-    marginTop: "12px",
+  primaryBtn: {
     width: "100%",
-    padding: "10px 14px",
-    fontSize: "13px",
-    fontWeight: "600",
-    color: "white",
-    background: "#FF9800",
+    padding: "15px 20px",
+    fontSize: "14.5px",
+    fontWeight: 700,
+    color: "#2b1d06",
+    background: "#E7C87E",
     border: "none",
     borderRadius: "12px",
     cursor: "pointer",
+    boxShadow: "0 8px 26px rgba(231,200,126,0.35)",
+    marginBottom: "12px",
+    transition: "transform .15s, filter .2s",
+  },
+  kiaiCard: {
+    background: "rgba(22,28,40,0.92)",
+    border: "1px solid rgba(231,200,126,0.25)",
+    borderRadius: "14px",
+    padding: "14px 16px",
+    textAlign: "left",
+    marginBottom: "12px",
+    backdropFilter: "blur(12px)",
+    boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
+  },
+  kiaiHeader: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" },
+  kiaiAvatar: {
+    width: "34px",
+    height: "34px",
+    borderRadius: "50%",
+    background: "rgba(231,200,126,0.16)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "17px",
+    flexShrink: 0,
+  },
+  kiaiName: { fontSize: "13px", fontWeight: 700, color: "#E7C87E", flex: 1 },
+  kiaiWave: { marginTop: "4px" },
+  speakBtn: {
+    width: "100%",
+    padding: "12px 16px",
+    fontSize: "13.5px",
+    fontWeight: 600,
+    background: "rgba(231,200,126,0.12)",
+    border: "1px solid rgba(231,200,126,0.4)",
+    color: "#F3D9A4",
+    borderRadius: "12px",
+    cursor: "pointer",
+    transition: "background .2s",
+  },
+  kiaiReply: {
+    fontSize: "14px",
+    color: "rgba(255,255,255,0.92)",
+    lineHeight: "1.7",
+    whiteSpace: "pre-wrap",
+  },
+  kiaiPulse: {
+    fontSize: "13.5px",
+    color: "rgba(255,255,255,0.6)",
+    animation: "uiPulse 1.6s ease-in-out infinite",
+  },
+  actions: { display: "flex", flexDirection: "column", gap: "10px", marginTop: "2px" },
+  btn: {
+    padding: "14px 20px",
+    fontSize: "14.5px",
+    fontWeight: 600,
+    color: "white",
+    border: "none",
+    borderRadius: "12px",
+    cursor: "pointer",
+    transition: "transform .15s, filter .2s",
   },
 };

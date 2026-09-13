@@ -5,11 +5,8 @@ import * as THREE from "three";
 
 /**
  * KiaiSpeaker3D — Figur Kiai Ahmad Dahlan (duduk bersila) yang "berbicara".
- * Muncul di episode_play: saat isSpeaking, mulut & tangan bergerak seperti
- * bercerita. Menghadap kamera setiap frame (aman untuk VR & latar 2D).
- *
- * Gaya: primitif low-poly (quest-safe, tanpa GLB). Props ikonik: peci,
- * sarung, dan biola kecil di pangkuan — rujukan "Biola Kiai".
+ * Rig 3 segmen: upper arm → elbow → forearm → hand (tangan di atas paha).
+ * Mulut & gestur tangan bergerak halus saat isSpeaking, diam saat idle.
  */
 export default function KiaiSpeaker3D({
   isSpeaking = false,
@@ -20,45 +17,76 @@ export default function KiaiSpeaker3D({
   const bodyRef = useRef();
   const headRef = useRef();
   const mouthRef = useRef();
-  const leftArmRef = useRef();
-  const rightArmRef = useRef();
+  const lUpperRef = useRef();   // lengan kiri atas
+  const rUpperRef = useRef();   // lengan kanan atas
+  const lForeRef = useRef();    // forearm kiri
+  const rForeRef = useRef();    // forearm kanan
+  const lHandRef = useRef();    // tangan kiri
+  const rHandRef = useRef();    // tangan kanan
 
   useFrame(({ clock, camera }) => {
     const t = clock.getElapsedTime();
-    // Menghadap kamera
-    if (lookRef.current) {
-      lookRef.current.lookAt(camera.position);
-    }
+
+    // --- Menghadap kamera ---
+    if (lookRef.current) lookRef.current.lookAt(camera.position);
+
+    // --- Badan bernafas halus ---
     if (bodyRef.current) {
-      bodyRef.current.position.y = Math.sin(t * 1.4) * 0.008;
+      bodyRef.current.position.y = Math.sin(t * 1.2) * 0.006;
     }
+
+    // --- Kepala ---
     if (headRef.current) {
-      headRef.current.rotation.x = 0.06 + Math.sin(t * 0.9) * 0.03;
-      headRef.current.rotation.y = Math.sin(t * 0.6) * 0.06;
+      headRef.current.rotation.x = 0.05 + Math.sin(t * 0.8) * 0.025;
+      headRef.current.rotation.y = Math.sin(t * 0.55) * 0.045;
+      headRef.current.rotation.z = Math.sin(t * 0.4) * 0.015;
     }
+
+    // --- Mulut ---
     if (mouthRef.current) {
       if (isSpeaking) {
-        const open = 0.5 + Math.sin(t * 14) * 0.3 + Math.sin(t * 23) * 0.18;
-        mouthRef.current.scale.y = Math.max(0.3, Math.min(1.1, open));
-        mouthRef.current.scale.x = 1 + Math.sin(t * 11) * 0.1;
+        const open = 0.5 + Math.sin(t * 13) * 0.28 + Math.sin(t * 22) * 0.14;
+        mouthRef.current.scale.y = Math.max(0.35, Math.min(1.05, open));
+        mouthRef.current.scale.x = 1 + Math.sin(t * 10) * 0.06;
       } else {
-        mouthRef.current.scale.y = 0.3;
-        mouthRef.current.scale.x = 1.1;
+        mouthRef.current.scale.y = 0.35;
+        mouthRef.current.scale.x = 1.06;
       }
     }
-    // Gestur tangan saat bercerita
-    if (leftArmRef.current && rightArmRef.current) {
-      if (isSpeaking) {
-        leftArmRef.current.rotation.z = -0.25 + Math.sin(t * 2.1) * 0.14;
-        rightArmRef.current.rotation.z = 0.25 + Math.sin(t * 2.6) * 0.14;
-        leftArmRef.current.rotation.x = Math.sin(t * 1.7) * 0.08;
-        rightArmRef.current.rotation.x = Math.sin(t * 2.0) * 0.08;
-      } else {
-        leftArmRef.current.rotation.z = -0.22;
-        rightArmRef.current.rotation.z = 0.22;
-        leftArmRef.current.rotation.x = 0;
-        rightArmRef.current.rotation.x = 0;
-      }
+
+    // --- Lengan kiri ---
+    if (lUpperRef.current) {
+      // Posisi dasar: di atas paha, lengan bawah menghadap depan
+      const base = -0.38;
+      const sway = isSpeaking ? Math.sin(t * 1.9) * 0.06 : 0;
+      lUpperRef.current.rotation.z = base + sway;
+      lUpperRef.current.rotation.x = isSpeaking ? Math.sin(t * 2.3) * 0.08 : 0.18;
+    }
+    if (lForeRef.current) {
+      // Siku ditekuk ~60°, tangan menghadap paha depan
+      lForeRef.current.rotation.x = isSpeaking ? 0.35 + Math.sin(t * 2.7) * 0.1 : 0.42;
+      lForeRef.current.rotation.z = isSpeaking ? Math.sin(t * 3.1) * 0.06 : 0;
+    }
+    if (lHandRef.current) {
+      // Tangan sedikit mengepal/membuka saat bicara
+      lHandRef.current.rotation.x = isSpeaking ? 0.2 + Math.sin(t * 4.2) * 0.25 : 0;
+      lHandRef.current.rotation.z = isSpeaking ? Math.sin(t * 2.5) * 0.1 : 0;
+    }
+
+    // --- Lengan kanan (mirror) ---
+    if (rUpperRef.current) {
+      const base = 0.38;
+      const sway = isSpeaking ? Math.sin(t * 2.1 + 0.5) * 0.06 : 0;
+      rUpperRef.current.rotation.z = base + sway;
+      rUpperRef.current.rotation.x = isSpeaking ? Math.sin(t * 2.5 + 0.3) * 0.08 : 0.18;
+    }
+    if (rForeRef.current) {
+      rForeRef.current.rotation.x = isSpeaking ? 0.35 + Math.sin(t * 2.9 + 0.4) * 0.1 : 0.42;
+      rForeRef.current.rotation.z = isSpeaking ? Math.sin(t * 3.3 + 0.2) * 0.06 : 0;
+    }
+    if (rHandRef.current) {
+      rHandRef.current.rotation.x = isSpeaking ? 0.2 + Math.sin(t * 4.4 + 0.3) * 0.25 : 0;
+      rHandRef.current.rotation.z = isSpeaking ? Math.sin(t * 2.7 + 0.1) * 0.1 : 0;
     }
   });
 
@@ -98,45 +126,56 @@ export default function KiaiSpeaker3D({
             <meshStandardMaterial color="#6b4f34" roughness={0.9} />
           </mesh>
 
-          {/* Lengan kiri */}
-          <group ref={leftArmRef} position={[-0.16, 0.44, 0]}>
-            <mesh rotation={[0, 0, 0.2]}>
-              <capsuleGeometry args={[0.045, 0.22, 8, 12]} />
+          {/* ======== Lengan kiri (3 segmen) ======== */}
+          <group ref={lUpperRef} position={[-0.17, 0.47, 0]}>
+            {/* Upper arm */}
+            <mesh rotation={[0.18, 0, -0.38]}>
+              <capsuleGeometry args={[0.044, 0.14, 8, 12]} />
               <meshStandardMaterial color="#f0ead8" roughness={0.72} />
             </mesh>
-            <mesh position={[-0.09, -0.17, 0]}>
-              <sphereGeometry args={[0.038, 12, 12]} />
-              <meshStandardMaterial color="#e8b08a" roughness={0.8} />
-            </mesh>
+            <group ref={lForeRef} position={[0.06, -0.14, 0.05]}>
+              {/* Forearm */}
+              <mesh rotation={[0.42, 0, 0.18]}>
+                <capsuleGeometry args={[0.038, 0.12, 8, 12]} />
+                <meshStandardMaterial color="#f0ead8" roughness={0.72} />
+              </mesh>
+              <group ref={lHandRef} position={[0.04, -0.11, 0.06]}>
+                {/* Tangan: agak membulat, sedikit pipih */}
+                <mesh scale={[1.15, 0.85, 0.9]}>
+                  <capsuleGeometry args={[0.03, 0.04, 6, 8]} />
+                  <meshStandardMaterial color="#e8b08a" roughness={0.8} />
+                </mesh>
+                {/* Telapak (bantalan tangan) */}
+                <mesh position={[0.01, -0.02, 0]} scale={[1.0, 0.7, 1.0]}>
+                  <sphereGeometry args={[0.022, 8, 8]} />
+                  <meshStandardMaterial color="#e2a67a" roughness={0.82} />
+                </mesh>
+              </group>
+            </group>
           </group>
 
-          {/* Lengan kanan */}
-          <group ref={rightArmRef} position={[0.16, 0.44, 0]}>
-            <mesh rotation={[0, 0, -0.2]}>
-              <capsuleGeometry args={[0.045, 0.22, 8, 12]} />
+          {/* ======== Lengan kanan (3 segmen, mirror) ======== */}
+          <group ref={rUpperRef} position={[0.17, 0.47, 0]}>
+            <mesh rotation={[0.18, 0, 0.38]}>
+              <capsuleGeometry args={[0.044, 0.14, 8, 12]} />
               <meshStandardMaterial color="#f0ead8" roughness={0.72} />
             </mesh>
-            <mesh position={[0.09, -0.17, 0]}>
-              <sphereGeometry args={[0.038, 12, 12]} />
-              <meshStandardMaterial color="#e8b08a" roughness={0.8} />
-            </mesh>
-          </group>
-
-          {/* Biola di pangkuan depan-kiri */}
-          <group position={[-0.13, 0.24, 0.12]} rotation={[0.2, 0.35, 0.15]}>
-            <mesh>
-              <boxGeometry args={[0.2, 0.045, 0.075]} />
-              <meshStandardMaterial color="#7a401e" roughness={0.5} metalness={0.2} />
-            </mesh>
-            <mesh position={[0.12, 0.01, 0]}>
-              <boxGeometry args={[0.2, 0.012, 0.014]} />
-              <meshStandardMaterial color="#5a2f14" roughness={0.6} />
-            </mesh>
-            {/* Busur */}
-            <mesh position={[0.06, 0.06, 0.05]} rotation={[0, 0, -0.4]}>
-              <cylinderGeometry args={[0.004, 0.004, 0.28, 6]} />
-              <meshStandardMaterial color="#3d2312" roughness={0.6} />
-            </mesh>
+            <group ref={rForeRef} position={[-0.06, -0.14, 0.05]}>
+              <mesh rotation={[0.42, 0, -0.18]}>
+                <capsuleGeometry args={[0.038, 0.12, 8, 12]} />
+                <meshStandardMaterial color="#f0ead8" roughness={0.72} />
+              </mesh>
+              <group ref={rHandRef} position={[-0.04, -0.11, 0.06]}>
+                <mesh scale={[1.15, 0.85, 0.9]}>
+                  <capsuleGeometry args={[0.03, 0.04, 6, 8]} />
+                  <meshStandardMaterial color="#e8b08a" roughness={0.8} />
+                </mesh>
+                <mesh position={[-0.01, -0.02, 0]} scale={[1.0, 0.7, 1.0]}>
+                  <sphereGeometry args={[0.022, 8, 8]} />
+                  <meshStandardMaterial color="#e2a67a" roughness={0.82} />
+                </mesh>
+              </group>
+            </group>
           </group>
 
           {/* Kepala */}

@@ -135,8 +135,8 @@ export default function App() {
         </>
       )}
 
-      {/* VR Button - toggle VR mode (disembunyikan saat admin dashboard) */}
-      <VRButton />
+      {/* VR Button - disembunyikan saat episode selesai supaya tidak menumpuk tombol aksi */}
+      {gameState !== "episode_finished" && <VRButton />}
 
       {/* Indikator Mode Mockup */}
       <MockModeBadge />

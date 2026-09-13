@@ -36,16 +36,21 @@ class SpeechService {
     return this.voices;
   }
 
-  // Get Indonesian voice or fallback
+  // Get Indonesian male voice (persona Kiai = pria) or fallback.
+  // Prioritas: (1) pria Indonesia, (2) suara Indonesia apa pun,
+  //           (3) pria berbahasa Inggris, (4) suara Inggris apa pun.
   getPreferredVoice() {
     const list = Array.isArray(this.voices) ? this.voices : [];
-    // Prefer Indonesian voice
-    let voice = list.find(v => v.lang.includes('id') || v.lang.includes('ID'));
+    const isId = (v) => /^(id|in)/i.test(v.lang || '') || /indonesia/i.test(v.name || '');
+    const isEn = (v) => /^en/i.test(v.lang || '');
+    const isMale = (v) =>
+      v.gender === 'male' ||
+      /ardi|andika|jaka|dimas|budi|fajar|prayoga|alex|male/i.test(v.name || '');
 
-    // Fallback to English
-    if (!voice) {
-      voice = list.find(v => v.lang.includes('en'));
-    }
+    let voice = list.find((v) => isId(v) && isMale(v));
+    if (!voice) voice = list.find((v) => isId(v));
+    if (!voice) voice = list.find((v) => isEn(v) && isMale(v));
+    if (!voice) voice = list.find((v) => isEn(v));
 
     return voice || list[0] || null;
   }

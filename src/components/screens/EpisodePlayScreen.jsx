@@ -103,7 +103,8 @@ export default function EpisodePlayScreen() {
       }
       case "refleksi_diri": {
         // Sub 0 = intro narator (dibacakan), sisanya = pertanyaan ke-(sub).
-        if (episodeSub === 0) return scene.text;
+        // Prefix "Narator:" di-strip supaya audio sama dengan yang ditampilkan.
+        if (episodeSub === 0) return stripMarker(scene.text);
         const q = scene.questions?.[episodeSub - 1];
         return q || scene.text;
       }
@@ -263,7 +264,8 @@ export default function EpisodePlayScreen() {
 
   const handleRefleksiNext = () => {
     const total = scene.questions.length;
-    if (episodeSub + 1 < total) {
+    // Lanjut sub hanya sampai pertanyaan terakhir (total); setelahnya pindah scene.
+    if (episodeSub < total) {
       setEpisodeSub(episodeSub + 1);
     } else {
       setEpisodeSub(0);
@@ -392,7 +394,7 @@ export default function EpisodePlayScreen() {
       {scene.type === "decision" && (
         <>
           <Bubble
-            avatar={speakerAvatar("Narator")}
+            avatar={avatarForSpeaker("Narator")}
             title="Narator — Kini giliranmu bertindak"
             text={scene.text}
             style={{ background: "#1a1a3ecc" }}
