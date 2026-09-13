@@ -105,7 +105,7 @@ export default function StartScreen() {
         {isMusicPlaying ? "🎵 suara" : "🔇 senyap"}
       </button>
 
-      {/* Keterangan VR */}
+      {/* Keterangan VR — ditaruh kiri bawah biar tidak ketimpa tombol Masuk VR */}
       <p style={styles.vrInfo}>🥽 Tombol “Masuk VR” selalu di sudut layar</p>
     </div>
   );
@@ -122,7 +122,7 @@ const styles = {
       "radial-gradient(130% 120% at 50% 24%, #2A2134 0%, #1D1626 52%, #120D18 100%)",
     zIndex: 100,
     overflow: "auto",
-    padding: "28px 16px 40px",
+    padding: "28px 16px 118px",
   },
   content: {
     display: "flex",
@@ -146,11 +146,17 @@ const styles = {
   },
   vrInfo: {
     position: "absolute",
-    bottom: "14px",
+    left: "18px",
+    right: "auto",
+    bottom: "18px",
+    maxWidth: "44%",
+    textAlign: "left",
     fontSize: "11px",
     letterSpacing: "0.04em",
+    lineHeight: 1.5,
     color: "rgba(246,234,212,0.4)",
     margin: 0,
+    pointerEvents: "none",
   },
 };
 
@@ -413,6 +419,15 @@ const gateCSS = `
     .sg-door { height: 250px; width: 196px; }
     .sg-sign-board { padding: 15px 16px 13px; }
     .sg-pool { height: 30px; }
+  }
+
+  @media (max-height: 720px) {
+    .sg-sign { margin-bottom: 20px; }
+    .sg-door { height: 218px; width: 178px; }
+    .sg-entrance { margin-bottom: 12px; }
+    .sg-micro { margin-bottom: 12px; font-size: 12px; line-height: 1.45; }
+    .sg-mock { margin-top: 18px; padding-top: 10px; }
+    .sg-sign-board { padding: 12px 16px 10px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
