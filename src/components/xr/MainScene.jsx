@@ -8,6 +8,10 @@ import TopicSelect3D from "./TopicSelect3D";
 import ProblemSelect3D from "./ProblemSelect3D";
 import Story3D from "./Story3D";
 import Conversation3D from "./Conversation3D";
+import EpisodeSelect3D from "./EpisodeSelect3D";
+import EpisodePlay3D from "./EpisodePlay3D";
+import EpisodeFinished3D from "./EpisodeFinished3D";
+import EpisodeEnvironment3D from "./EpisodeEnvironment3D";
 import XRPointer from "./XRPointer";
 import NPCCounselor from "./NPCCounselor";
 
@@ -18,6 +22,8 @@ import {
   ForestEnvironment 
 } from "./environments";
 
+const EPISODE_STATES = new Set(["episode_select", "episode_play", "episode_finished"]);
+
 /**
  * MainScene - Scene 3D utama
  * Berisi environment, lighting, dan objek 3D
@@ -27,6 +33,7 @@ export default function MainScene() {
   const { isPresenting } = useXR();
   const gameState = useGameStore((s) => s.gameState);
   const selectedEnvironment = useGameStore((s) => s.selectedEnvironment);
+  const inEpisodeFlow = EPISODE_STATES.has(gameState);
 
   // Debug log
   React.useEffect(() => {
@@ -36,7 +43,7 @@ export default function MainScene() {
   return (
     <Suspense fallback={null}>
       {/* Controls - hanya untuk desktop */}
-      {!isPresenting && (
+      {!isPresenting && !inEpisodeFlow && (
         <OrbitControls 
           makeDefault 
           enablePan={false}
@@ -48,27 +55,33 @@ export default function MainScene() {
 
       {/* Base Lighting - untuk semua environment */}
       <ambientLight intensity={0.5} />
-      
-      {/* Environment-specific lighting ditambahkan di masing-masing component */}
-      {selectedEnvironment === 'gallery' && (
+
+      {/* Environment: episode flow pakai auto-link prosedural, bukan pilihan user */}
+      {inEpisodeFlow ? (
+        <EpisodeEnvironment3D />
+      ) : (
         <>
-          <directionalLight 
-            position={[5, 10, 5]} 
-            intensity={1.5} 
-            castShadow
-            shadow-mapSize={[2048, 2048]}
-          />
-          <pointLight position={[-5, 5, -5]} intensity={0.8} color="#a8d8ff" />
-          <pointLight position={[0, 3, 0]} intensity={0.5} color="#ffffff" />
-          <Environment preset="sunset" />
+          {selectedEnvironment === 'gallery' && (
+            <>
+              <directionalLight 
+                position={[5, 10, 5]} 
+                intensity={1.5} 
+                castShadow
+                shadow-mapSize={[2048, 2048]}
+              />
+              <pointLight position={[-5, 5, -5]} intensity={0.8} color="#a8d8ff" />
+              <pointLight position={[0, 3, 0]} intensity={0.5} color="#ffffff" />
+              <Environment preset="sunset" />
+            </>
+          )}
+
+          {/* Selected Environment */}
+          <SelectedEnvironment environmentId={selectedEnvironment} />
         </>
       )}
 
-      {/* Selected Environment */}
-      <SelectedEnvironment environmentId={selectedEnvironment} />
-
       {/* NPC - selalu tampil di state tertentu (visible di background mode 2D) */}
-      {(gameState === 'topic_select' || gameState === 'problem_select' || 
+      {!inEpisodeFlow && (gameState === 'topic_select' || gameState === 'problem_select' || 
         gameState === 'story' || gameState === 'conversation' || gameState === 'finished') && (
         <ConversationNPC />
       )}
@@ -81,6 +94,9 @@ export default function MainScene() {
       {gameState === 'topic_select' && <TopicSelect3D />}
       {gameState === 'problem_select' && <ProblemSelect3D />}
       {gameState === 'story' && <Story3D />}
+      {gameState === 'episode_select' && <EpisodeSelect3D />}
+      {gameState === 'episode_play' && <EpisodePlay3D />}
+      {gameState === 'episode_finished' && <EpisodeFinished3D />}
       {(gameState === 'conversation' || gameState === 'finished') && <Conversation3D />}
 
       {/* XR Pointer rays untuk VR interaction */}

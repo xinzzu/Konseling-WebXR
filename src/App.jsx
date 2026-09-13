@@ -8,6 +8,9 @@ import EnvironmentSelectScreen from "./components/screens/EnvironmentSelectScree
 import TopicSelectScreen from "./components/screens/TopicSelectScreen";
 import ProblemSelectScreen from "./components/screens/ProblemSelectScreen";
 import StoryScreen from "./components/screens/StoryScreen";
+import EpisodeSelectScreen from "./components/screens/EpisodeSelectScreen";
+import EpisodePlayScreen from "./components/screens/EpisodePlayScreen";
+import EpisodeFinishedScreen from "./components/screens/EpisodeFinishedScreen";
 import ConversationPanel from "./components/ui/ConversationPanel";
 import MockModeBadge from "./components/ui/MockModeBadge";
 
@@ -95,6 +98,9 @@ export default function App() {
           {gameState === 'topic_select' && <TopicSelectScreen />}
           {gameState === 'problem_select' && <ProblemSelectScreen />}
           {gameState === 'story' && <StoryScreen />}
+          {gameState === 'episode_select' && <EpisodeSelectScreen />}
+          {gameState === 'episode_play' && <EpisodePlayScreen />}
+          {gameState === 'episode_finished' && <EpisodeFinishedScreen />}
           {(gameState === 'conversation' || gameState === 'finished') && <ConversationPanel />}
         </>
       )}

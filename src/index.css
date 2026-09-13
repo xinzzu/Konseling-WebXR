@@ -69,3 +69,18 @@ body > button,
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* Lampu lentera Kauman — napas cahaya halus */
+@keyframes lampBreathe {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+.lamp-breathe {
+  animation: lampBreathe 3.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lamp-breathe { animation: none !important; }
+  .fade-in, .pulse { animation-duration: 0.01s; }
+}

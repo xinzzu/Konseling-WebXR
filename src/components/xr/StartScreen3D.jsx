@@ -37,8 +37,8 @@ export default function StartScreen3D() {
 
   const handleStart = () => {
     console.log('StartScreen3D: MULAI clicked!');
-    // Ke environment select dulu, baru topic select
-    setGameState('environment_select');
+    // REAL APP: langsung ke pilih episode (live backend)
+    setGameState('episode_select');
   };
 
   return (
@@ -74,7 +74,7 @@ export default function StartScreen3D() {
           anchorX="center"
           anchorY="middle"
         >
-          Ruang Aman untuk Berbagi Cerita
+          Pelajaran Kedamaian bersama Kiai Ahmad Dahlan
         </Text>
 
         {/* Description */}
@@ -87,7 +87,8 @@ export default function StartScreen3D() {
           maxWidth={1.3}
           textAlign="center"
         >
-          Selamat datang! Pilih suasana dan topik yang ingin kamu bicarakan.
+          Pilih salah satu dari lima pelajaran: Ikhlas, Rendah Hati, Berpikir
+          Kritis, Welas Asih, atau Toleransi.
         </Text>
 
         {/* Start Button */}

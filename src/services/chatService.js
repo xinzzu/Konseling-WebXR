@@ -17,7 +17,7 @@ function useMock() {
     return useGameStore.getState()?.isMockMode === true;
   } catch {
     return false;
-  }
+  } 
 }
 
 /**

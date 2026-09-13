@@ -112,6 +112,52 @@ const useGameStore = create((set, get) => ({
   isMockMode: false,
   setMockMode: (enabled) => set({ isMockMode: !!enabled }),
 
+  // ============================================================
+  // EPISODE FLOW (Real App) — kontrak backend /api/episodes
+  // gameState: 'episode_select' | 'episode_play' | 'episode_finished'
+  // sceneIndex: 0 = kartu peran, 1..10 = Adegan 1..10
+  // ============================================================
+
+  episodes: [],
+  setEpisodes: (list) => set({ episodes: list }),
+
+  selectedEpisode: null,
+  setSelectedEpisode: (episode) =>
+    set((state) => ({
+      selectedEpisode: episode,
+      sceneIndex: 0,
+      episodeSub: 0,
+      episodeChoices: {},
+      sessionId: state.sessionId || `ep-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    })),
+
+  sceneIndex: 0,
+  setSceneIndex: (index) => set({ sceneIndex: index, episodeSub: 0 }),
+
+  // EpisodeSub = sub-langkah dalam satu scene (pertanyaan refleksi / item transfer)
+  episodeSub: 0,
+  setEpisodeSub: (sub) => set({ episodeSub: sub }),
+
+  // Jawaban tersimpan per scene: { "5": { choiceId, score }, "9:0": {...} }
+  episodeChoices: {},
+  recordEpisodeChoice: (key, choiceId, score) =>
+    set((state) => ({
+      episodeChoices: { ...state.episodeChoices, [key]: { choiceId, score } },
+    })),
+
+  goNextScene: () => set((state) => ({ sceneIndex: state.sceneIndex + 1, episodeSub: 0 })),
+  goPrevScene: () =>
+    set((state) => ({ sceneIndex: Math.max(0, state.sceneIndex - 1), episodeSub: 0 })),
+
+  resetEpisodeFlow: () =>
+    set({
+      episodes: [],
+      selectedEpisode: null,
+      sceneIndex: 0,
+      episodeSub: 0,
+      episodeChoices: {},
+    }),
+
   // Reset everything
   resetGame: () => set({
     gameState: 'start',
@@ -132,6 +178,11 @@ const useGameStore = create((set, get) => ({
     isSpeaking: false,
     isLoading: false,
     error: null,
+    episodes: [],
+    selectedEpisode: null,
+    sceneIndex: 0,
+    episodeSub: 0,
+    episodeChoices: {},
   }),
 
   // Legacy: Start new session with topic (untuk backward compatibility)
