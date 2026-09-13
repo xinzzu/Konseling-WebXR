@@ -1,164 +1,70 @@
-# WebXR Konseling Game
+# Konseling VR — "Pelajaran Kedamaian bersama Kiai Ahmad Dahlan"
 
-Game konseling berbasis WebXR dengan integrasi LLM (Language Learning Model).
+Game konseling berbasis WebXR: **5 episode × 10 scene** materi kedamaian, dengan suara (TTS), dukungan VR (Quest/Pico/emulator iwer), dan **Dashboard Peneliti** untuk memantau data riset.
 
-## 🎮 Fitur
+## Fitur
 
-- **Mode Website**: Bisa dimainkan langsung di browser
-- **Mode VR**: Masuk ke mode immersive VR untuk pengalaman lebih immersive
-- **Text-to-Speech**: Respon AI dibacakan dengan voice synthesis
-- **Voice Waveform**: Animasi visualisasi suara saat berbicara
-- **Topic Selection**: Pilih topik konseling yang diinginkan
-- **Interactive Conversation**: Percakapan interaktif dengan pilihan respons
+- **5 episode** materi kedamaian, masing-masing **10 scene** (pembuka → dialog → keputusan → konsekuensi → renungan → refleksi diri → situasimu → penutup) — konten diambil dari backend (`/api/episodes`).
+- **Dua mode main**: Website (2D, klik) dan VR immersive (controller/gaze) — satu alur cerita yang sama.
+- **Text-to-Speech**: mode `edge` (mp3 on-the-fly, gratis, tanpa key) + fallback Web Speech API; ada waveform suara.
+- **Pesan pribadi "dari Kiai"** via OpenRouter LLM (opsional; otomatis jatuh ke pesan statis bila key kosong).
+- **Dashboard Peneliti** di `/riset`: login JWT, ringkasan per episode, riwayat jawaban per scene, filter, export CSV.
+- **Emulator WebXR** (iwer + DevUI) untuk pengembangan desktop; environment 3D custom (sawah, pantai, hutan, dll).
+- Musik latar, skip dicentang manual sesuai brief (tanpa label benar/salah, skor tersembunyi).
 
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 18+ 
-- npm atau pnpm
-
-### Installation
+## Quick Start
 
 ```bash
-# Masuk ke folder project
-cd webxr-game
-
-# Install dependencies
 npm install
-
-# Jalankan development server
-npm run dev
+npm run dev      # http://localhost:3000
 ```
 
-Buka http://localhost:3000 di browser.
+Backend harus berjalan dulu (repo `backend/` pada port 3100). Bila API di tempat lain:
 
-### VR Testing
-
-1. Untuk testing VR di desktop, project sudah include `iwer` emulator
-2. Klik tombol "Enter VR" untuk masuk mode VR
-3. Untuk testing di VR headset sungguhan:
-   - Pastikan device dan komputer di network yang sama
-   - Akses via IP lokal (misal: http://192.168.1.x:3000)
-   - Browser VR headset harus support WebXR
-
-## 📁 Struktur Project
-
-```
-webxr-game/
-├── public/
-│   └── data.json          # Data dummy untuk LLM responses
-├── src/
-│   ├── main.jsx           # Entry point
-│   ├── App.jsx            # Main app component
-│   ├── index.css          # Global styles
-│   ├── components/
-│   │   ├── screens/
-│   │   │   ├── StartScreen.jsx      # Layar start
-│   │   │   └── TopicSelectScreen.jsx # Layar pilih topik
-│   │   ├── ui/
-│   │   │   ├── ConversationPanel.jsx # Panel percakapan
-│   │   │   └── VoiceWaveform.jsx     # Animasi waveform
-│   │   └── xr/
-│   │       ├── XRCanvas.jsx    # Canvas 3D + WebXR
-│   │       ├── VRButton.jsx    # Tombol masuk VR
-│   │       └── MainScene.jsx   # Scene 3D utama
-│   ├── services/
-│   │   ├── speechService.js   # Text-to-Speech service
-│   │   └── dataService.js     # Data/API service
-│   └── store/
-│       └── useGameStore.js    # Zustand state management
-├── package.json
-├── vite.config.js
-└── README.md
+```bash
+# .env.local
+VITE_API_URL=https://be-konseling.vercel.app
 ```
 
-## 🎯 Flow Aplikasi
+## Struktur
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
-│ Start Screen│ --> │ Topic Select │ --> │ Conversation    │
-│   (MULAI)   │     │  (3 topik)   │     │ (4x tanya-jawab)│
-└─────────────┘     └──────────────┘     └─────────────────┘
-                                                  │
-                                                  v
-                                         ┌─────────────────┐
-                                         │    Finished     │
-                                         │ (Kembali Menu)  │
-                                         └─────────────────┘
+src/
+  App.jsx                  # routing game + dashboard (/riset, URL-driven)
+  components/
+    screens/               # UI 2D: Start, EpisodeSelect, EpisodePlay, EpisodeFinished, ResearchDashboard, dll
+    xr/                    # UI 3D: EpisodePlay3D, Button3D, environments, NPC, dll
+    ui/                    # ConversationPanel, VoiceWaveform, MockModeBadge
+  services/                # dataService, episodeService, ttsService, speechService, researchService, soundService
+  store/useGameStore.js    # state game (Zustand)
+  hooks/useAudioOwner.js   # satu sumber audio aktif
 ```
 
-## 🔧 Customization
+## Flow game
 
-### Menambah/Edit Topik
-
-Edit file `public/data.json`:
-
-```json
-{
-  "topics": [
-    {
-      "id": "unique-id",
-      "label": "Nama Topik",
-      "color": "#HexColor",
-      "description": "Deskripsi singkat",
-      "conversations": [
-        { "role": "assistant", "text": "Pesan dari AI" },
-        { "role": "user_choice", "options": ["Pilihan 1", "Pilihan 2"] },
-        // ... dst
-      ]
-    }
-  ]
-}
+```
+Start → Pilih Episode → EpisodePlay (2D / VR) → Finish → Kembali Menu
+   │
+   └── mode legacy (lingkungan → topik → masalah → cerita) masih ada di store
 ```
 
-### Menghubungkan ke Backend LLM
+Tombol **"📊 Dashboard Peneliti"** di menu start membuka `#/riset` (atau akses langsung `/riset`).
 
-Edit `src/services/dataService.js`:
+## Dashboard Peneliti
 
-```javascript
-// Ganti API_BASE_URL dengan URL backend Anda
-const API_BASE_URL = 'https://your-api.com';
+- Akses: `localhost:3000/riset` (path) atau `#/riset` (hash).
+- Login dengan kredensial peneliti (`RESEARCH_USERNAME` / `RESEARCH_PASSWORD` dari backend).
+- Isi: kartu ringkasan (sesi, selesai, data jawaban, % selesai), tabel per episode (distribusi skor 0/1/2), riwayat jawaban (filter episode/sesi/tanggal + pencarian lokal), export CSV ringkas & mentah.
+- Data dikirim frontend ke `/api/progress`; disimpan backend ke **Postgres Neon** (persisten) atau file JSONL (dev).
 
-// Implementasi sendMessage() untuk komunikasi dengan LLM
-export async function sendMessage(topicId, message, sessionId) {
-  const response = await fetch(`${API_BASE_URL}/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ topicId, message, sessionId }),
-  });
-  return await response.json();
-}
+## Testing VR
+
+1. **Desktop**: klik tombol "Enter VR" → emulator iwer (Meta Quest 3 device preset) langsung pakai environment custom.
+2. **Headset asli** (Quest/Pico): buka URL **HTTPS** (deploy Vercel) atau IP lokal; browser headset harus mendukung WebXR.
+
+## Build
+
+```bash
+npm run build        # output dist/
+npm run vercel-build # build khusus Vercel (vercel.json sudah set; /riset tidak 404)
 ```
-
-## 🛠️ Tech Stack
-
-- **React 19** - UI Framework
-- **Vite** - Build tool
-- **Three.js** - 3D graphics
-- **@react-three/fiber** - React renderer for Three.js
-- **@react-three/xr** - WebXR support
-- **@react-three/drei** - Useful helpers
-- **Zustand** - State management
-- **Web Speech API** - Text-to-Speech
-- **iwer** - WebXR emulator untuk development
-
-## 📱 Browser Support
-
-- Chrome 79+ (Desktop & Android)
-- Firefox 98+ (Desktop)
-- Edge 79+
-- Meta Quest Browser
-- Pico Browser
-
-## 🚧 TODO
-
-- [ ] Integrasi dengan backend LLM (OpenAI, dll)
-- [ ] 3D avatar dengan lip-sync
-- [ ] Hand tracking support
-- [ ] Spatial audio
-- [ ] Save/load session
-- [ ] Multi-language support
-
-## 📄 License
-
-MIT
