@@ -16,7 +16,7 @@ import {
 } from "../../services/episodeMeta";
 import ttsService from "../../services/ttsService";
 import { useAudioOwner } from "../../hooks/useAudioOwner";
-import KiaiSpeaker3D from "./KiaiSpeaker3D";
+import KiaiSpeaker3D, { personaForSpeaker } from "./KiaiSpeaker3D";
 
 const SLOW_SCENES = new Set(["decision", "transfer"]);
 
@@ -110,6 +110,26 @@ export default function EpisodePlay3D() {
   const scenes = selectedEpisode?.scenes || [];
   const epId = selectedEpisode?.id || "";
   const scene = sceneIndex > 0 ? scenes[sceneIndex - 1] : null;
+
+  // Siapa yang sedang "berbicara" — menentukan persona figur & gerak mulutnya.
+  // Narator = suara latar (VO), jadi figur tampil diam tanpa lip-sync.
+  const { speakerName, isNarrator } = useMemo(() => {
+    let sp = "Narator";
+    if (scene) {
+      if (
+        scene.type === "consequence" ||
+        scene.type === "refleksi_kiai" ||
+        scene.type === "penutup"
+      ) {
+        sp = "Kiai Ahmad Dahlan";
+      } else if (scene.type === "dialog") {
+        sp = scene.speaker || "Narator";
+      }
+    }
+    return { speakerName: sp, isNarrator: /narator/i.test(sp) };
+  }, [scene]);
+
+  const persona = personaForSpeaker(speakerName);
 
   const decisionScene = useMemo(
     () => scenes.find((s) => s.type === "decision"),
@@ -653,9 +673,12 @@ yStart={optionSceneOptionsY(scene.text, scene.options.length)}
         />
       </Panel3D>
 
-      {/* Figur Kiai — narator episode yang "berbicara" */}
+      {/* Figur tokoh episode — persona mengikuti speaker scene;
+          diam (tanpa lip-sync) saat Narator yang membacakan */}
       <KiaiSpeaker3D
-        isSpeaking={isSpeaking}
+        isSpeaking={isSpeaking && !isNarrator}
+        persona={persona}
+        label={isNarrator ? null : persona.name}
         position={[1.45, -1.55, 0.1]}
         scale={2.0}
       />
