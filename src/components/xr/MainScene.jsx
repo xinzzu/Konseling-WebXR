@@ -16,10 +16,11 @@ import XRPointer from "./XRPointer";
 import NPCCounselor from "./NPCCounselor";
 
 // Environments
-import { 
-  GalleryEnvironment, 
-  BeachEnvironment, 
-  ForestEnvironment 
+import {
+  GalleryEnvironment,
+  BeachEnvironment,
+  ForestEnvironment,
+  Video360Environment
 } from "./environments";
 
 const EPISODE_STATES = new Set(["episode_select", "episode_play", "episode_finished"]);
@@ -114,6 +115,8 @@ function SelectedEnvironment({ environmentId }) {
       return <BeachEnvironment />;
     case 'forest':
       return <ForestEnvironment />;
+    case 'video-360':
+      return <Video360Environment />;
     case 'gallery':
     default:
       return <GalleryEnvironment />;

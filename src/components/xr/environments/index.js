@@ -1,6 +1,7 @@
 export { default as GalleryEnvironment } from './GalleryEnvironment';
 export { default as BeachEnvironment } from './BeachEnvironment';
 export { default as ForestEnvironment } from './ForestEnvironment';
+export { default as Video360Environment } from './Video360Environment';
 
 // Environment metadata
 export const ENVIRONMENTS = [
@@ -24,5 +25,12 @@ export const ENVIRONMENTS = [
     description: 'Hutan yang sejuk dengan kunang-kunang',
     icon: '🌲',
     color: '#66bb6a',
+  },
+  {
+    id: 'video-360',
+    label: 'Video 360° (Sample)',
+    description: 'Background video 360 derajat (eksperimen)',
+    icon: '🎥',
+    color: '#ab47bc',
   },
 ];

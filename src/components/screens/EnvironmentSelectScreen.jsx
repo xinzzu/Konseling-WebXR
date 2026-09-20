@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import useGameStore from "../../store/useGameStore";
 import { ENVIRONMENTS } from "../xr/environments";
 import { startGreeting } from "../../services/chatService";
+import { prefetchVideo360 } from "../../services/video360Prefetch";
 
 /**
  * EnvironmentSelectScreen - Pilihan environment untuk mode 2D
@@ -10,6 +11,12 @@ import { startGreeting } from "../../services/chatService";
 export default function EnvironmentSelectScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Prefetch video 360 begitu user sampai di layar ini (bukan saat app load),
+  // supaya kalau nanti dipilih, videonya sudah sebagian ada di cache browser.
+  useEffect(() => {
+    prefetchVideo360();
+  }, []);
   
   const selectedEnvironment = useGameStore((s) => s.selectedEnvironment);
   const setSelectedEnvironment = useGameStore((s) => s.setSelectedEnvironment);

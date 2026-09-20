@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Text, RoundedBox } from "@react-three/drei";
 import Panel3D from "./Panel3D";
 import Button3D from "./Button3D";
 import useGameStore from "../../store/useGameStore";
 import { ENVIRONMENTS } from "./environments";
 import { startGreeting } from "../../services/chatService";
+import { prefetchVideo360 } from "../../services/video360Prefetch";
 
 /**
  * EnvironmentSelect3D - Pilihan environment dalam bentuk 3D untuk VR
@@ -12,7 +13,12 @@ import { startGreeting } from "../../services/chatService";
  */
 export default function EnvironmentSelect3D() {
   const [isLoading, setIsLoading] = useState(false);
-  
+
+  // Prefetch video 360 begitu user sampai di layar ini (bukan saat app load).
+  useEffect(() => {
+    prefetchVideo360();
+  }, []);
+
   const setSelectedEnvironment = useGameStore((s) => s.setSelectedEnvironment);
   const selectedEnvironment = useGameStore((s) => s.selectedEnvironment);
   const setGameState = useGameStore((s) => s.setGameState);
