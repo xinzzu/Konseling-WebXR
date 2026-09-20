@@ -10,12 +10,14 @@ export function prefetchVideo360() {
   if (prefetched || typeof document === "undefined") return;
   prefetched = true;
 
-  const link = document.createElement("link");
-  link.rel = "preload";
-  link.as = "video";
-  link.href = VIDEO_SRC;
-  link.type = "video/mp4";
-  document.head.appendChild(link);
+  // Warm HTTP cache pakai fetch (same-origin, no-cors). Sengaja TIDAK pakai
+  // <link rel="preload" as="video"> karena Chrome log warning
+  // "uses an unsupported `as` value" untuk as="video".
+  try {
+    fetch(VIDEO_SRC, { mode: "no-cors", cache: "force-cache" }).catch(() => {});
+  } catch {
+    // abaikan — prefetch best-effort, video tetap di-load saat mount
+  }
 }
 
 export { VIDEO_SRC };

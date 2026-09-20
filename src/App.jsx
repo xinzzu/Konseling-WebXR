@@ -53,7 +53,11 @@ export default function App() {
   }, []);
 
   // Setup iwer untuk WebXR emulation (development only)
+  // Dikecualikan untuk Dashboard Peneliti (/riset, /auth, /dashboard) —
+  // halaman itu murni 2D, gak butuh tombol "Enter XR"/toolbar emulator.
   useEffect(() => {
+    if (isRisetLocation()) return;
+
     async function setupXREmulator() {
       // Check if native WebXR is supported
       if (navigator.xr) {

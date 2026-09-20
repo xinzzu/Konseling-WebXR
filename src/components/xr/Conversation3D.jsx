@@ -12,7 +12,7 @@ import backgroundMusic from "../../services/backgroundMusic";
  * Conversation3D - Panel percakapan dalam bentuk 3D untuk VR
  */
 export default function Conversation3D() {
-  const { isPresenting } = useXR();
+  const isPresenting = useXR((state) => !!state.session); // v6: derive dari session, "isPresenting" tidak ada di store
   const selectedTopic = useGameStore((s) => s.selectedTopic);
   const conversations = useGameStore((s) => s.conversations);
   const currentIndex = useGameStore((s) => s.currentConversationIndex);

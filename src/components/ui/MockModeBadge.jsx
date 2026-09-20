@@ -25,8 +25,9 @@ const styles = {
   badge: {
     position: "fixed",
     top: "12px",
-    left: "50%",
-    transform: "translateX(-50%)",
+    right: "12px",
+    // Digeser ke kanan atas (bukan center) supaya tidak menutupi
+    // toolbar iwer DevUI (emulator WebXR) yang nangkring di area atas-tengah.
     display: "flex",
     alignItems: "center",
     gap: "10px",

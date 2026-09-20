@@ -22,21 +22,26 @@ export default function EpisodeSelect3D() {
   const setSelectedEpisode = useGameStore((s) => s.setSelectedEpisode);
   const setTtsConfig = useGameStore((s) => s.setTtsConfig);
   const setGameState = useGameStore((s) => s.setGameState);
+  const setMockMode = useGameStore((s) => s.setMockMode);
+
+  const loadEpisodes = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [list, tts] = await Promise.all([fetchEpisodes(), fetchTTSConfig()]);
+      setEpisodes(list);
+      setTtsConfig(tts);
+    } catch (err) {
+      console.error("EpisodeSelect3D load error:", err);
+      setError("Gagal memuat episode. Coba lagi atau buka Mockup.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     setTtsConfig(null);
-    (async () => {
-      try {
-        const [list, tts] = await Promise.all([fetchEpisodes(), fetchTTSConfig()]);
-        setEpisodes(list);
-        setTtsConfig(tts);
-      } catch (err) {
-        console.error("EpisodeSelect3D load error:", err);
-        setError("Gagal memuat episode.");
-      } finally {
-        setLoading(false);
-      }
-    })();
+    loadEpisodes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -50,6 +55,11 @@ export default function EpisodeSelect3D() {
       console.error("EpisodeSelect3D select error:", err);
       setError("Gagal memuat episode.");
     }
+  };
+
+  const handleOpenMock = () => {
+    setMockMode(true);
+    setGameState("environment_select");
   };
 
   if (loading) {
@@ -79,9 +89,29 @@ export default function EpisodeSelect3D() {
         </Text>
 
         {error && (
-          <Text position={[0, 0.3, 0.05]} fontSize={0.03} color="#ffb4b4" anchorX="center" anchorY="middle">
-            {error}
-          </Text>
+          <>
+            <Text position={[0, 0.3, 0.05]} fontSize={0.03} color="#ffb4b4" anchorX="center" anchorY="middle" maxWidth={2.2} textAlign="center">
+              {error}
+            </Text>
+            <Button3D
+              position={[-0.55, 0.12, 0.04]}
+              size={[0.9, 0.11, 0.03]}
+              color="#2196F3"
+              hoverColor="#42A5F5"
+              text="Coba Lagi"
+              textSize={0.032}
+              onClick={loadEpisodes}
+            />
+            <Button3D
+              position={[0.55, 0.12, 0.04]}
+              size={[0.9, 0.11, 0.03]}
+              color="#FFA726"
+              hoverColor="#FFB74D"
+              text="Buka Mockup"
+              textSize={0.032}
+              onClick={handleOpenMock}
+            />
+          </>
         )}
 
         {(episodes || []).map((ep, i) => {

@@ -13,6 +13,7 @@ import EpisodePlay3D from "./EpisodePlay3D";
 import EpisodeFinished3D from "./EpisodeFinished3D";
 import EpisodeEnvironment3D from "./EpisodeEnvironment3D";
 import XRPointer from "./XRPointer";
+import VRControllerExit from "./VRControllerExit";
 import NPCCounselor from "./NPCCounselor";
 
 // Environments
@@ -31,7 +32,8 @@ const EPISODE_STATES = new Set(["episode_select", "episode_play", "episode_finis
  * Saat VR mode, tampilkan UI 3D
  */
 export default function MainScene() {
-  const { isPresenting } = useXR();
+  // useXR() v6 tidak punya field `isPresenting` — derive dari `session`.
+  const isPresenting = useXR((state) => !!state.session);
   const gameState = useGameStore((s) => s.gameState);
   const selectedEnvironment = useGameStore((s) => s.selectedEnvironment);
   const inEpisodeFlow = EPISODE_STATES.has(gameState);
@@ -102,6 +104,9 @@ export default function MainScene() {
 
       {/* XR Pointer rays untuk VR interaction */}
       <XRPointer />
+
+      {/* Keluar VR via controller: tahan A+B (kanan) / X+Y (kiri) */}
+      <VRControllerExit />
     </Suspense>
   );
 }

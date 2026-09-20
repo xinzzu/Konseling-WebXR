@@ -1,10 +1,14 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Text, RoundedBox } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import soundService from "../../services/soundService";
 
 const GLOW_COLOR = new THREE.Color("#b9e9ff");
+
+// Counter id unik per instance tombol (untuk test-hook E2E).
+let e2eCounter = 0;
+const e2eVec = new THREE.Vector3();
 
 /**
  * Button3D - Tombol 3D yang bisa diklik dengan controller, pointer, atau hand tracking
@@ -28,6 +32,30 @@ export default function Button3D({
   const boxRef = useRef();
   const [hovered, setHovered] = useState(false);
   const [pressed, setPressed] = useState(false);
+  // Guard anti double-fire: satu gestur fisik (klik mouse / tap / trigger
+  // controller) bisa membangkitkan onPointerUp + onClick + onSelect untuk
+  // tombol yang sama. Tanpa guard, satu pencet = 2-4x onClick → adegan loncat.
+  const lastFireRef = useRef(0);
+  // Test-hook E2E (HANYA aktif bila window.__E2E3D diset via addInitScript
+  // oleh script automation; nol efek di production): laporkan posisi layar
+  // tiap tombol ke window.__buttons3d supaya test tak perlu hover-sweep.
+  const e2eIdRef = useRef(null);
+  const e2eTickRef = useRef(0);
+  if (e2eIdRef.current === null) {
+    e2eIdRef.current = `b${++e2eCounter}`;
+  }
+  const e2eId = e2eIdRef.current;
+
+  // Bersihkan registry saat tombol unmount (biar test tak klik tombol basi).
+  useEffect(() => {
+    return () => {
+      try {
+        if (typeof window !== "undefined" && window.__buttons3d) {
+          delete window.__buttons3d[e2eId];
+        }
+      } catch { /* abaikan */ }
+    };
+  }, [e2eId]);
 
   // Lebar teks kira-kira (glyph rata-rata ≈ 0.55 × fontSize) → auto-shrink
   // supaya label panjang tidak keluar dari tombol/panel (terpotong).
@@ -40,8 +68,26 @@ export default function Button3D({
 
   // Animation: denyut "siap dilanjut" via glow (emissive), BUKAN scale —
   // supaya tulisan di tombol tidak mengecil/membesar saat berdenyut.
-  useFrame(({ clock }) => {
+  useFrame(({ clock, camera, size }) => {
     if (!meshRef.current) return;
+
+    // Test-hook E2E: proyeksikan posisi tombol ke layar (frame pertama +
+    // throttle tiap ~6 frame agar segar di headless fps rendah).
+    if (typeof window !== "undefined" && window.__E2E3D && groupRef.current) {
+      e2eTickRef.current += 1;
+      if ((e2eTickRef.current === 1 || e2eTickRef.current % 6 === 0) && camera && size) {
+        groupRef.current.getWorldPosition(e2eVec);
+        e2eVec.project(camera);
+        const reg = (window.__buttons3d = window.__buttons3d || {});
+        reg[e2eIdRef.current] = {
+          label,
+          x: Math.round((e2eVec.x * 0.5 + 0.5) * size.width),
+          y: Math.round((-e2eVec.y * 0.5 + 0.5) * size.height),
+          behind: e2eVec.z > 1,
+          t: Date.now(),
+        };
+      }
+    }
 
     const t = clock?.elapsedTime ?? 0;
     const targetScale = pressed ? 0.96 : hovered ? 1.06 : 1;
@@ -69,13 +115,16 @@ export default function Button3D({
   // Handle click - unified untuk semua input methods
   const handleClick = useCallback((e) => {
     if (disabled) return;
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    if (now - lastFireRef.current < 600) return; // abaikan event ganda 1 gestur
+    lastFireRef.current = now;
     if (e) e.stopPropagation();
-    
+
     // Play click sound
     if (playSound) {
       soundService.playClick();
     }
-    
+
     if (onClick) onClick();
   }, [disabled, onClick, playSound]);
 
@@ -85,11 +134,13 @@ export default function Button3D({
     setPressed(true);
   };
 
+  // pointerUp HANYA melepas status pressed — eksekusi onClick cukup lewat
+  // onClick (mouse/touch) atau onSelect (controller VR). Kalau pointerUp ikut
+  // menembak onClick, satu klik = 2x aksi (adegan loncat).
   const handlePointerUp = (e) => {
     if (disabled) return;
     e.stopPropagation();
     setPressed(false);
-    handleClick(e);
   };
 
   const handlePointerOver = (e) => {

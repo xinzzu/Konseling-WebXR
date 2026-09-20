@@ -11,12 +11,16 @@ export const xrStore = createXRStore();
  * XRStateSync - Komponen untuk sync XR state ke game store
  */
 function XRStateSync() {
-  const { isPresenting } = useXR();
-  
+  // PENTING: useXR() dari @react-three/xr v6 TIDAK punya field `isPresenting`
+  // di store-nya (cuma `session`, `mode`, dll) — destructure `isPresenting`
+  // selalu balikin undefined. Derive dari `session` yang beneran ada.
+  const session = useXR((state) => state.session);
+  const isPresenting = !!session;
+
   useEffect(() => {
     useGameStore.setState({ isInVR: isPresenting });
   }, [isPresenting]);
-  
+
   return null;
 }
 

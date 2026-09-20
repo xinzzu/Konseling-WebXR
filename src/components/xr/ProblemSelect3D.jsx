@@ -25,7 +25,7 @@ const DELAY_MS = 3000; // Delay dalam ms jika mode "delayed"
  * ProblemSelect3D - Pilihan masalah dalam bentuk 3D untuk VR
  */
 export default function ProblemSelect3D() {
-  const { isPresenting } = useXR();
+  const isPresenting = useXR((state) => !!state.session); // v6: derive dari session, "isPresenting" tidak ada di store
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showOptions, setShowOptions] = useState(OPTIONS_DISPLAY_MODE === "instant");

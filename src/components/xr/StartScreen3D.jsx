@@ -1,28 +1,27 @@
 import { useState, useEffect } from "react";
-import { Text } from "@react-three/drei";
+import { Text, RoundedBox } from "@react-three/drei";
 import Panel3D from "./Panel3D";
 import Button3D from "./Button3D";
 import useGameStore from "../../store/useGameStore";
 import backgroundMusic from "../../services/backgroundMusic";
 
 /**
- * StartScreen3D - Layar start dalam bentuk 3D untuk VR
- * Posisi di depan user: Z negatif = depan, Y=1.5 = eye level di VR
+ * StartScreen3D - Gerbang langgar Kauman (1915) versi 3D/VR.
+ * Disinergikan dengan StartScreen 2D:
+ * - "Masuk Langgar" = mode real (mock OFF) -> episode_select
+ * - "Mode Mockup"   = demo tanpa backend (mock ON) -> environment_select
+ * - Dashboard peneliti tetap bisa dibuka via hash #/riset
+ * Visual: kayu (#8a5a2e), kuningan (#c9a24a), tinta krem (#f8edda).
  */
 export default function StartScreen3D() {
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const setGameState = useGameStore((s) => s.setGameState);
+  const setMockMode = useGameStore((s) => s.setMockMode);
 
-  // Start background music on mount
   useEffect(() => {
-    // Auto-start backsound saat masuk
     backgroundMusic.playAmbient();
     setIsMusicPlaying(true);
-
-    return () => {
-      // Jangan stop musik saat pindah screen, biarkan terus jalan
-      // backgroundMusic.stop();
-    };
+    return () => {};
   }, []);
 
   const handleToggleMusic = () => {
@@ -35,83 +34,136 @@ export default function StartScreen3D() {
     }
   };
 
-  const handleStart = () => {
-    console.log('StartScreen3D: MULAI clicked!');
-    // REAL APP: langsung ke pilih episode (live backend)
-    setGameState('episode_select');
+  // 2D: handleStart — mode real, tanpa mock
+  const handleEnterLanggar = () => {
+    setMockMode(false);
+    setGameState("episode_select");
+  };
+
+  // 2D: handleStartMock — demo tanpa backend
+  const handleStartMock = () => {
+    setMockMode(true);
+    setGameState("environment_select");
+  };
+
+  const handleOpenDashboard = () => {
+    window.location.hash = "#/riset";
   };
 
   return (
-    // === KUSTOMISASI POSISI PANEL ===
-    // position={[x, y, z]} dimana:
-    // - x: posisi horizontal (kiri/kanan), 0 = tengah
-    // - y: TINGGI panel, tambah nilai untuk naik (misal 1.8 lebih tinggi dari 1.5)
-    // - z: jarak dari user, nilai negatif = di depan user (-1.5 = 1.5 meter di depan)
-    <group position={[0, 1.5, -0.8]}>
-      {/* Main Panel */}
+    <group position={[0, 1.55, -0.9]}>
       <Panel3D
         position={[0, 0, 0]}
-        width={1.6}
-        height={1.0}
-        backgroundColor="#0a0a1a"
+        width={1.9}
+        height={1.6}
+        backgroundColor="#1D1626"
       >
-        {/* Title */}
+        {/* Tombol suara — tengah atas */}
+        <Button3D
+          position={[0, 0.62, 0.04]}
+          size={[0.4, 0.09, 0.03]}
+          color={isMusicPlaying ? "#9C27B0" : "#555"}
+          hoverColor={isMusicPlaying ? "#BA68C8" : "#777"}
+          text={isMusicPlaying ? "suara" : "senyap"}
+          textSize={0.028}
+          playSound={false}
+          onClick={handleToggleMusic}
+        />
+
+        {/* Papan nama kayu */}
+        <RoundedBox args={[1.25, 0.34, 0.03]} radius={0.02} position={[0, 0.4, 0.03]}>
+          <meshStandardMaterial color="#6e4520" roughness={0.65} />
+        </RoundedBox>
         <Text
-          position={[0, 0.25, 0.02]}
-          fontSize={0.12}
-          color="#ffffff"
+          position={[0, 0.45, 0.05]}
+          fontSize={0.085}
+          color="#f8edda"
           anchorX="center"
           anchorY="middle"
         >
           Konseling VR
         </Text>
-
-        {/* Subtitle */}
         <Text
-          position={[0, 0.1, 0.02]}
-          fontSize={0.04}
-          color="#4fc3f7"
-          anchorX="center"
-          anchorY="middle"
-        >
-          Pelajaran Kedamaian bersama Kiai Ahmad Dahlan
-        </Text>
-
-        {/* Description */}
-        <Text
-          position={[0, -0.05, 0.02]}
+          position={[0, 0.32, 0.05]}
           fontSize={0.028}
-          color="#cccccc"
+          color="#e7c87e"
           anchorX="center"
           anchorY="middle"
-          maxWidth={1.3}
+          maxWidth={1.15}
           textAlign="center"
+          lineHeight={1.3}
         >
-          Pilih salah satu dari lima pelajaran: Ikhlas, Rendah Hati, Berpikir
-          Kritis, Welas Asih, atau Toleransi.
+          PELAJARAN KEDAMAIAN BERSAMA KIAI AHMAD DAHLAN
         </Text>
 
-        {/* Start Button */}
+        <Text
+          position={[0, 0.06, 0.04]}
+          fontSize={0.028}
+          color="#f6ead4"
+          anchorX="center"
+          anchorY="middle"
+          maxWidth={1.6}
+          textAlign="center"
+          lineHeight={1.4}
+        >
+          Dengarkan Kiai bercerita, ambil keputusanmu, bawa ke sekolahmu.
+        </Text>
+
+        {/* CTA utama — sama seperti 2D */}
         <Button3D
-          position={[0, -0.25, 0.02]}
-          size={[0.5, 0.14, 0.04]}
-          color="#4CAF50"
-          hoverColor="#66BB6A"
-          text="MULAI"
-          textSize={0.05}
-          onClick={handleStart}
+          position={[0, -0.12, 0.04]}
+          size={[0.95, 0.14, 0.04]}
+          color="#7b4f28"
+          hoverColor="#8a5a2e"
+          text="Masuk Langgar"
+          textSize={0.045}
+          pulse
+          onClick={handleEnterLanggar}
+        />
+        <Text
+          position={[0, -0.23, 0.04]}
+          fontSize={0.024}
+          color="#e7c87e"
+          anchorX="center"
+          anchorY="middle"
+        >
+          Lima pelajaran menantimu
+        </Text>
+
+        {/* Mode mockup — sama seperti 2D */}
+        <Button3D
+          position={[0, -0.36, 0.04]}
+          size={[0.95, 0.1, 0.03]}
+          color="#333333"
+          hoverColor="#555555"
+          text="Mode Mockup — demo tanpa backend"
+          textSize={0.026}
+          playSound={false}
+          onClick={handleStartMock}
         />
 
-        {/* Music Toggle Button */}
+        {/* Dashboard peneliti */}
         <Button3D
-          position={[0.55, 0.35, 0.02]}
-          size={[0.35, 0.1, 0.03]}
-          color={isMusicPlaying ? "#9C27B0" : "#555"}
-          hoverColor={isMusicPlaying ? "#BA68C8" : "#777"}
-          text={isMusicPlaying ? "🎵 ON" : "🔇 OFF"}
-          textSize={0.03}
-          onClick={handleToggleMusic}
+          position={[0, -0.49, 0.04]}
+          size={[0.7, 0.08, 0.03]}
+          color="#333333"
+          hoverColor="#555555"
+          text="Dashboard Peneliti"
+          textSize={0.024}
+          playSound={false}
+          onClick={handleOpenDashboard}
         />
+
+        {/* Hint keluar VR via controller (teks saja, bukan tombol) */}
+        <Text
+          position={[0, -0.64, 0.04]}
+          fontSize={0.022}
+          color="#aaaaaa"
+          anchorX="center"
+          anchorY="middle"
+        >
+          Di dalam VR: tahan A+B untuk keluar
+        </Text>
       </Panel3D>
     </group>
   );

@@ -14,7 +14,7 @@ import ttsService from "../../services/ttsService";
  * Menampilkan FULL text dengan font kecil agar muat
  */
 export default function Story3D() {
-  const { isPresenting } = useXR();
+  const isPresenting = useXR((state) => !!state.session); // v6: derive dari session, "isPresenting" tidak ada di store
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasFinished, setHasFinished] = useState(false);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
