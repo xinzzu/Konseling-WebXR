@@ -33,4 +33,18 @@ export const ENVIRONMENTS = [
     icon: '🎥',
     color: '#ab47bc',
   },
+  {
+    id: 'video-360-2',
+    label: 'Video 360° (Sample 2)',
+    description: 'Background video 360 derajat lainnya (eksperimen)',
+    icon: '🎬',
+    color: '#7e57c2',
+  },
+  {
+    id: 'video-360-3',
+    label: 'Video 360° (Sample 3)',
+    description: 'Background video 360 derajat lainnya (eksperimen)',
+    icon: '🎞️',
+    color: '#26a69a',
+  },
 ];

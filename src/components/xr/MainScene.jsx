@@ -23,6 +23,7 @@ import {
   ForestEnvironment,
   Video360Environment
 } from "./environments";
+import { VIDEO_SRC_2, VIDEO_SRC_3 } from "../../services/video360Prefetch";
 
 const EPISODE_STATES = new Set(["episode_select", "episode_play", "episode_finished"]);
 
@@ -122,6 +123,10 @@ function SelectedEnvironment({ environmentId }) {
       return <ForestEnvironment />;
     case 'video-360':
       return <Video360Environment />;
+    case 'video-360-2':
+      return <Video360Environment src={VIDEO_SRC_2} />;
+    case 'video-360-3':
+      return <Video360Environment src={VIDEO_SRC_3} />;
     case 'gallery':
     default:
       return <GalleryEnvironment />;

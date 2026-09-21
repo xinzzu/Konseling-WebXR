@@ -1,51 +1,57 @@
-import React, { useEffect, useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { VIDEO_SRC } from "../../../services/video360Prefetch";
 
-// Singleton video + texture — tahan StrictMode double-mount, tanpa suspend
-// (useVideoTexture pakai suspend-react yang membuat scene blank saat fallback null).
-let _video = null;
-let _texture = null;
+// Singleton video + texture per-src — tahan StrictMode double-mount, tanpa
+// suspend (useVideoTexture pakai suspend-react yang bikin scene blank saat
+// fallback null). Di-keyed by src supaya beberapa video 360 bisa hidup
+// berdampingan (masing-masing environment punya video sendiri).
+const videoCache = new Map();
+const textureCache = new Map();
 
-function getVideo() {
-  if (_video) return _video;
-  _video = document.createElement("video");
-  _video.loop = true;
-  _video.muted = true;
-  _video.defaultMuted = true;
-  _video.playsInline = true;
-  _video.preload = "auto";
-  _video.setAttribute("muted", "");
-  _video.setAttribute("playsinline", "");
-  _video.src = VIDEO_SRC;
-  _video.load();
-  _video.style.cssText = "position:fixed;width:1px;height:1px;opacity:0;pointer-events:none";
-  document.body.appendChild(_video);
-  _video.play().catch(() => {});
-  const retry = () => _video.play().catch(() => {});
+function getVideo(src) {
+  if (videoCache.has(src)) return videoCache.get(src);
+  const video = document.createElement("video");
+  video.loop = true;
+  video.muted = true;
+  video.defaultMuted = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.setAttribute("muted", "");
+  video.setAttribute("playsinline", "");
+  video.src = src;
+  video.load();
+  video.style.cssText = "position:fixed;width:1px;height:1px;opacity:0;pointer-events:none";
+  document.body.appendChild(video);
+  video.play().catch(() => {});
+  const retry = () => video.play().catch(() => {});
   window.addEventListener("pointerdown", retry, { once: true });
   window.addEventListener("keydown", retry, { once: true });
-  return _video;
+  videoCache.set(src, video);
+  return video;
 }
 
-function getTexture() {
-  if (_texture) return _texture;
-  _texture = new THREE.VideoTexture(getVideo());
-  _texture.colorSpace = THREE.SRGBColorSpace;
-  _texture.minFilter = THREE.LinearFilter;
-  _texture.magFilter = THREE.LinearFilter;
-  _texture.generateMipmaps = false;
-  return _texture;
+function getTexture(src) {
+  if (textureCache.has(src)) return textureCache.get(src);
+  const texture = new THREE.VideoTexture(getVideo(src));
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  textureCache.set(src, texture);
+  return texture;
 }
 
-export default function Video360Environment() {
+export default function Video360Environment({ src = VIDEO_SRC }) {
   const textureRef = useRef(null);
   const videoRef = useRef(null);
+  const srcRef = useRef(null);
 
-  if (!textureRef.current) {
-    textureRef.current = getTexture();
-    videoRef.current = _video;
+  if (srcRef.current !== src) {
+    srcRef.current = src;
+    textureRef.current = getTexture(src);
+    videoRef.current = videoCache.get(src);
   }
 
   const texture = textureRef.current;
